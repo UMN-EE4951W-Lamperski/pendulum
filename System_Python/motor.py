@@ -26,7 +26,7 @@ class Motor:
         
     # Move the motor at a given speed, given as a floating point percentage (-100 <= x <= 100)
     # If speed is less than 0, motor will run in reverse, otherwise it will run forward
-    def Move(self, speed):
+    def move(self, speed):
         if speed < -100.0 or speed > 100.0:
             return
         # Stop any previous movements
@@ -47,7 +47,7 @@ class Motor:
     
     # Stop the motor from spinning.
     # To brake the motor, both direction outputs are set to HIGH
-    def Brake(self):
+    def brake(self):
         # Stop any current PWM signals
         self.speed_pwm.stop()
         # Set the direction outputs to brake
@@ -57,7 +57,7 @@ class Motor:
         
     # Set the motor to coast (i.e. Do not provide power to the motor, but still allow it to spin)
     # To coast the motor, both direction outputs are set to LOW
-    def Coast(self):
+    def coast(self):
         # Stop any current PWM signals
         self.speed_pwm.stop()
         # Set the direction outputs to coast

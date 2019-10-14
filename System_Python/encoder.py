@@ -30,14 +30,14 @@ class Encoder:
             print("ERROR. Unable to setup the configuration required")
         # Wait some time to before reading
         time.sleep(0.5)
-    def setZero(self):
+    def set_zero(self):
         # Take current position as zero
-        self.offset=self.readPosition('Raw')
+        self.offset=self.read_position('Raw')
     def clockup(self):
         GPIO.output(self.clk_pin,1)
     def clockdown(self):
         GPIO.output(self.clk_pin,0)
-    def readPosition(self, format):
+    def read_position(self, format):
         # Most of this is based of timing diagram of encoder
         # Pull CS low to start reading
         GPIO.output(self.cs_pin,0) 
