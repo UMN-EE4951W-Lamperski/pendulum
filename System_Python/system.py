@@ -26,7 +26,7 @@ class System:
 		self.encoder_angular = Encoder(encoder_clock_pin, encoder_angular_cs_pin, encoder_data_pin)
 		self.encoder_angular.set_zero()
 		# Initialize the linear encoder.
-		self.encoder_linear = Encoder(encoder_clock_pin, encoder_linear_cs_pin, encoder_data_pin)
+		self.encoder_linear = Linear_Encoder(encoder_clock_pin, encoder_linear_cs_pin, encoder_data_pin)
 		self.encoder_linear.set_zero()
     # END __init__()
 	
@@ -43,9 +43,7 @@ class System:
 		angular_position = self.encoder_angular.read_position('Degrees')
 		if angular_position > 180:
 			angular_position = angular_position - 360
-		# TODO: Implement linear position
-		# Need to determine how to keep track of position based on gearing and rotations.
-		#linear_position = self.encoder_linear.read_position('Raw')
+		#linear_position = self.encoder_linear.read_position()
 		linear_position = 0
 		return (angular_position, linear_position)
 	# END measure()
@@ -65,4 +63,39 @@ class System:
 		self.motor.move(speed)
 	# END adjust()
 # END System
+
+# Linear Encoder class
+# This class is to help with using an absolute encoder for linear position sensing as assembled in the physical system.
+# The function definitions here are the same as with the regular encoder (pseudo-interface).
+class Linear_Encoder:
+	DIAMETER = 4 # MEASURE THIS
+	
+	def __init__(self, clk_pin, cs_pin, data_pin):
+		self.encoder = Encoder(clk_pin, cs_pin, data_pin)
+		set_zero()
+	def set_zero(self):
+        # Set the zero position for the encoder
+        self.encoder.set_zero()
+		# Reset the internal position counter
+		self.rotations = 0
+		self.last_position = 0
+    def read_position(self):
+        # Read the position of the encoder 
+		position = self.encoder.read_position('Raw')
+		# Compare to last known position
+		# NOTE: For now, assume that we are moving the smallest possible distance (i.e. 5 -> 1 is -4, not 1020)
+		if position - self.last_position > 0:
+			if position < 512 and self.last_position > 512:
+				# We are moving to the right (positive) and have completed a new rotation
+				self.rotations++
+		else:
+			if position > 512 and self.last_position < 512:
+				# We are moving to the left (negative) and have completed a new rotation
+				self.rotations--
+		# Save the last position for the next calculation
+		self.last_position = position
+			
+		# compute the position based on the system parameters
+		# linear position = (2pi*r)(n) + (2pi*r)(position/1024) = (2pi*r)(n + position/1024) = (pi*d)(n + position/1024)
+		return (pi*DIAMETER)*(self.rotations + position/1024)
     
