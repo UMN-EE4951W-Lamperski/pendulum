@@ -44,8 +44,7 @@ class System:
         angular_position = self.encoder_angular.read_position('Degrees')
         if angular_position > 180:
             angular_position = angular_position - 360
-        #linear_position = self.encoder_linear.read_position()
-        linear_position = 0
+        linear_position = self.encoder_linear.read_position()
         return (angular_position, linear_position)
     # END measure()
     
@@ -70,7 +69,7 @@ class System:
 # This class is to help with using an absolute encoder for linear position sensing as assembled in the physical system.
 # The function definitions here are the same as with the regular encoder (pseudo-interface).
 class Linear_Encoder:
-    DIAMETER = 4.0 # MEASURE THIS
+    PROPORTION = 14.5
     
     def __init__(self, clk_pin, cs_pin, data_pin):
         self.encoder = Encoder(clk_pin, cs_pin, data_pin)
@@ -95,8 +94,7 @@ class Linear_Encoder:
                 # We are moving to the left (negative) and have completed a new rotation
                 self.rotations = self.rotations - 1
         # Save the last position for the next calculation
-        self.last_position = position
-            
+        self.last_position = position 
         # compute the position based on the system parameters
         # linear position = (2pi*r)(n) + (2pi*r)(position/1024) = (2pi*r)(n + position/1024) = (pi*d)(n + position/1024)
-        return (math.pi*DIAMETER)*(self.rotations + position/1024)
+        return (PROPORTION)*(self.rotations + position/1024)

@@ -11,13 +11,13 @@ m = Motor(speed_pin, forward_pin, reverse_pin)
 dir = 'ascending'
 speed = 0.0
 while 1:
-    m.move(speed)
-    if speed >= 100.0:
+    if speed >= 15.0:
         dir = 'descending'
-    elif speed <= -100.0:
+    elif speed <= -15.0:
         dir = 'ascending'
     if dir == 'ascending':
-        speed = speed + 0.5
+        speed = speed + 2.0
     else:
-        speed = speed - 0.5
+        speed = speed - 2.0
+    m.move(speed)
     time.sleep(0.1)
