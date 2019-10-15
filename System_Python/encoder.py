@@ -58,15 +58,15 @@ class Encoder:
         # Pull CS high after finish reading
         GPIO.output(self.cs_pin,1)
         # Format with offset, Max is 1024
-        data=(data+offset)%1024
+        data=(data-self.offset)%1024
         # Data is linearly mapped
         if format=="Raw":
             return data
         elif format=="Degrees":
-            degrees=data/(1024/360)
+            degrees=(data/1024.0)*360.0
             return degrees
         elif format=="Radian":
-            radians=data/(1024/(2*math.pi))
+            radians=(data/1024.0)*(2.0*math.pi)
             return radians
         else:
             print("ERROR. Invalid format (Raw, Degrees, Radians)")

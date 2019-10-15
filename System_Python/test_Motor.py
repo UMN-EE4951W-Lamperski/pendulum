@@ -11,7 +11,7 @@ m = Motor(speed_pin, forward_pin, reverse_pin)
 dir = 'ascending'
 speed = 0.0
 while 1:
-    m.Move(speed)
+    m.move(speed)
     if speed >= 100.0:
         dir = 'descending'
     elif speed <= -100.0:
