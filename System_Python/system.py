@@ -5,6 +5,7 @@ import math
 from datetime import datetime
 from time import sleep
 import RPi.GPIO as GPIO
+import sys
 
 # IO pin definitions
 ### Motor pins
@@ -38,16 +39,16 @@ class System:
         
         # Enable hardware interrupts for hardware limit switches
         GPIO.setup(limit_negative_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=negative_limit_callback, bouncetime=300)
+        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
         GPIO.setup(limit_positive_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=positive_limit_callback, bouncetime=300)
+        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
         
         # Setup soft limits if defined by the user (this is "challenge mode" for the user, making the constraints more difficult).
         # By default, the soft limits will not be used (when set NaN), and the whole extent of the system is available (to the HW limits).
         self.negative_soft_limit = negative_limit
         self.positive_soft_limit = positive_limit
         # If both limits have been defined, verify that they are valid (i.e. positive limit must be greater than the negative limit)
-        if not math.isnan(negative_limit) and not math.isnan(positive_limit) and not negative_limit < positive_limit
+        if not math.isnan(negative_limit) and not math.isnan(positive_limit) and not negative_limit < positive_limit:
             print("ERROR: Invalid software limits provided. Must be valid floating-point numbers and positive limit must be greater than negative limit. Software limits will be disabled.")
             self.negative_soft_limit = float('nan')
             self.positive_soft_limit = float('nan')
@@ -56,7 +57,8 @@ class System:
         
         # Create and setup results file (to be sent back to the server and displayed/downloaded to the user)
         # Results file is a CSV with the following entries: angle, position, speed
-        self.result_filename = "~/test_results/" + datetime.now().strftime("%d-%m-%Y_%H:%M:%S") + ".csv"
+        self.result_filename = "/home/pi/test_results/" + datetime.now().strftime("%d-%m-%Y_%H:%M:%S") + ".csv"
+        
         result_file = open(self.result_filename, "w+")
         result_file.write("angle(degrees),position(inches),speed(percentage)\n")
         result_file.close()
@@ -88,8 +90,8 @@ class System:
         # Set zero again: this is the real zero
         self.encoder_linear.set_zero()
         # Re-enable the limit switch interrupts
-        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=negative_limit_callback, bouncetime=300)
-        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=positive_limit_callback, bouncetime=300)
+        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
+        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
     # END initialize
     
     # Get the values of the encoders to determine the angular and linear position of the pendulum.
@@ -222,4 +224,4 @@ class Linear_Encoder:
         self.last_position = position 
         # compute the position based on the system parameters
         # linear position = (2pi*r)(n) + (2pi*r)(position/1024) = (2pi*r)(n + position/1024) = (pi*d)(n + position/1024)
-        return (PROPORTION)*(self.rotations + position/1024)
+        return (self.PROPORTION)*(self.rotations + position/1024)
