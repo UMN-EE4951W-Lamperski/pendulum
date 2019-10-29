@@ -3,6 +3,7 @@ from motor import Motor
 from encoder import Encoder
 import math
 from datetime import datetime
+from time import sleep
 import RPi.GPIO as GPIO
 
 # IO pin definitions
@@ -32,6 +33,7 @@ class System:
         self.encoder_angular.set_zero()
         # Initialize the linear encoder.
         self.encoder_linear = Linear_Encoder(encoder_clock_pin, encoder_linear_cs_pin, encoder_data_pin)
+		# We assume that the system has been initialized on startup to a 0 position, or that the previous run ended by returning the system to 0
         self.encoder_linear.set_zero()
 		
 		# Enable hardware interrupts for hardware limit switches
@@ -59,6 +61,36 @@ class System:
 		result_file.write("angle(degrees),position(inches),speed(percentage)\n")
 		result_file.close()
     # END __init__()
+	
+	def initialize(self):
+		# Temporarily disable the limit switch interrupts: we do not want the program to exit if the switch is triggered
+		GPIO.remove_event_detect(limit_negative_pin)
+		GPIO.remove_event_detect(limit_positive_pin)
+		# Begin moving slowly in the negative direction until the negative limit switch is triggered
+		if not GPIO.input(limit_negative_pin) == False:
+			self.motor.move(-1)
+			GPIO.wait_for_edge(limit_negative_pin, GPIO.FALLING)
+		self.motor.brake()
+		# Set zero at the negative end of the track for easy reference in determining the extent
+		self.encoder_linear.set_zero()
+		# Begin moving slowly in the positive direction until the positive limit switch is triggered
+		self.motor.move(1)
+		GPIO.wait_for_edge(limit_positive_pin, GPIO.FALLING)
+		self.motor.brake()
+		# Get the current position (the extent of the track)
+		extent = self.encoder_linear.read_position()
+		# Move back towards the center until we reach position extent/2
+		position = extent
+		self.motor.move(-1)
+		while not position == extent / 2:
+			position = self.encoder_linear.read_position()
+		self.motor.brake()
+		# Set zero again: this is the real zero
+		self.encoder_linear.set_zero()
+		# Re-enable the limit switch interrupts
+		GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=negative_limit_callback, bouncetime=300)
+		GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=positive_limit_callback, bouncetime=300)
+	# END initialize
     
     # Get the values of the encoders to determine the angular and linear position of the pendulum.
     # Values are returned as a tuple: (angle, linear).
@@ -121,6 +153,19 @@ class System:
 		result_file.close()
 	# END add_results
 	
+	# Go back to the zero position (linear) so that the next execution starts in the correct place.
+	def return_home(self):
+		position = self.encoder_linear.read_position()
+		# slowly move towards 0 until we get there
+		if position > 0:
+			self.motor.move(-1)
+		elif position < 0:
+			self.motor.move(1)
+		while not position == 0:
+			position = self.encoder_linear.read_position()
+		self.motor.brake()
+	# END return_home
+	
 	# Callback for when negative limit switch is triggered.
 	def negative_limit_callback(self, channel):
 		# Print negative limit trigger to the results file.
@@ -141,6 +186,8 @@ class System:
 	# END positive_limit_callback
 	def limit_triggered(self):
 		self.motor.brake()
+		sleep(2)
+		self.return_home()
 		sys.exit(1)
 # END System
 
