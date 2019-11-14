@@ -18,7 +18,7 @@ encoder_data_pin = 3
 ### Angular encoder pins
 encoder_angular_cs_pin = 4
 ### Linear encoder pins
-encoder_linear_cs_pin = 5
+encoder_linear_cs_pin = 14 
 ### Limit switch pins (configured to PULLUP)
 limit_negative_pin = 19
 limit_positive_pin = 26
@@ -71,21 +71,33 @@ class System:
         # Begin moving slowly in the negative direction until the negative limit switch is triggered
         if not GPIO.input(limit_negative_pin) == False:
             self.motor.move(-1)
-            GPIO.wait_for_edge(limit_negative_pin, GPIO.FALLING)
+            pressed = True
+            while pressed != False:
+                pressed = GPIO.input(limit_negative_pin)
+                sleep(0.01)
         self.motor.brake()
         # Set zero at the negative end of the track for easy reference in determining the extent
         self.encoder_linear.set_zero()
+        sleep(1)
         # Begin moving slowly in the positive direction until the positive limit switch is triggered
         self.motor.move(1)
-        GPIO.wait_for_edge(limit_positive_pin, GPIO.FALLING)
+        pressed = True
+        while pressed != False:
+            # We must continue reading linear encoder motion to keep track of rotations
+            self.encoder_linear.read_position()
+            pressed = GPIO.input(limit_positive_pin)
+            sleep(0.01)
+        #GPIO.wait_for_edge(limit_positive_pin, GPIO.FALLING)
         self.motor.brake()
         # Get the current position (the extent of the track)
         extent = self.encoder_linear.read_position()
         # Move back towards the center until we reach position extent/2
         position = extent
+        sleep(1)
         self.motor.move(-1)
-        while not position == extent / 2:
+        while position >= (extent / 2.):
             position = self.encoder_linear.read_position()
+            sleep(0.01) 
         self.motor.brake()
         # Set zero again: this is the real zero
         self.encoder_linear.set_zero()
@@ -205,23 +217,20 @@ class Linear_Encoder:
         # Set the zero position for the encoder
         self.encoder.set_zero()
         # Reset the internal position counter
-        self.rotations = 0
-        self.last_position = 0
+        self.rotations = 0.
+        self.last_position = 0.
     def read_position(self):
-        # Read the position of the encoder 
-        position = self.encoder.read_position('Raw')
+        # Read the position of the encoder (apply a noise filter, we don't need that much precision here)
+        position = float(self.encoder.read_position('Raw') & 0b1111111100)
         # Compare to last known position
         # NOTE: For now, assume that we are moving the smallest possible distance (i.e. 5 -> 1 is -4, not 1020)
-        if position - self.last_position > 0:
-            if position < 512 and self.last_position > 512:
-                # We are moving to the right (positive) and have completed a new rotation
-                self.rotations = self.rotations + 1
-        else:
-            if position > 512 and self.last_position < 512:
-                # We are moving to the left (negative) and have completed a new rotation
-                self.rotations = self.rotations - 1
+        if (position - self.last_position) > 768.:
+            self.rotations = self.rotations - 1.
+        elif (position - self.last_position) < -768.:
+            self.rotations = self.rotations + 1.
+        
         # Save the last position for the next calculation
         self.last_position = position 
         # compute the position based on the system parameters
         # linear position = (2pi*r)(n) + (2pi*r)(position/1024) = (2pi*r)(n + position/1024) = (pi*d)(n + position/1024)
-        return (self.PROPORTION)*(self.rotations + position/1024)
+        return (self.PROPORTION)*(self.rotations + position/1024.)
