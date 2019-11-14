@@ -23,10 +23,18 @@ encoder_linear_cs_pin = 14
 limit_negative_pin = 19
 limit_positive_pin = 26
 
+# System parameters
+system_max_x = 16.5
+system_min_x = -16.5
+
 # System Class
 # This is the primary interface a student will use to control the pendulum.
 class System:
     def __init__(self, negative_limit=float('nan'), positive_limit=float('nan')):
+        GPIO.setwarnings(False)
+        # Initialize public variables
+        self.max_x = system_max_x
+        self.min_x = system_min_x
         # Initialize the motor.
         self.motor = Motor(motor_speed_pin, motor_forward_pin, motor_reverse_pin)
         # Initialize the angular encoder.
@@ -70,7 +78,7 @@ class System:
         GPIO.remove_event_detect(limit_positive_pin)
         # Begin moving slowly in the negative direction until the negative limit switch is triggered
         if not GPIO.input(limit_negative_pin) == False:
-            self.motor.move(-1)
+            self.motor.move(-4)
             pressed = True
             while pressed != False:
                 pressed = GPIO.input(limit_negative_pin)
@@ -80,7 +88,7 @@ class System:
         self.encoder_linear.set_zero()
         sleep(1)
         # Begin moving slowly in the positive direction until the positive limit switch is triggered
-        self.motor.move(1)
+        self.motor.move(4)
         pressed = True
         while pressed != False:
             # We must continue reading linear encoder motion to keep track of rotations
@@ -94,7 +102,7 @@ class System:
         # Move back towards the center until we reach position extent/2
         position = extent
         sleep(1)
-        self.motor.move(-1)
+        self.motor.move(-4)
         while position >= (extent / 2.):
             position = self.encoder_linear.read_position()
             sleep(0.01) 
@@ -171,9 +179,9 @@ class System:
         position = self.encoder_linear.read_position()
         # slowly move towards 0 until we get there
         if position > 0:
-            self.motor.move(-1)
+            self.motor.move(-4)
         elif position < 0:
-            self.motor.move(1)
+            self.motor.move(4)
         while not position == 0:
             position = self.encoder_linear.read_position()
         self.motor.brake()
@@ -181,6 +189,7 @@ class System:
     
     # Callback for when negative limit switch is triggered.
     def negative_limit_callback(self, channel):
+        self.motor.brake()
         # Print negative limit trigger to the results file.
         result_file = open(self.result_filename, "a")
         result_file.write("Negative hardware limit has been reached!")
@@ -190,6 +199,7 @@ class System:
     # END negative_limit_callback
     # Callback for when positive limit switch is triggered.
     def positive_limit_callback(self, channel):
+        self.motor.brake()
         # Print positive limit trigger to the results file.
         result_file = open(self.result_filename, "a")
         result_file.write("Positive hardware limit has been reached!")
@@ -198,8 +208,7 @@ class System:
         self.limit_triggered()
     # END positive_limit_callback
     def limit_triggered(self):
-        self.motor.brake()
-        sleep(2)
+        sleep(1)
         self.return_home()
         sys.exit(1)
 # END System
