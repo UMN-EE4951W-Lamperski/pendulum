@@ -30,7 +30,7 @@ system_min_x = -16.5
 # System Class
 # This is the primary interface a student will use to control the pendulum.
 class System:
-    def __init__(self, negative_limit=float('nan'), positive_limit=float('nan')):
+    def __init__(self, negative_limit=float('nan'), positive_limit=float('nan'), angular_units='Degrees'):
         GPIO.setwarnings(False)
         # Initialize public variables
         self.max_x = system_max_x
@@ -39,7 +39,7 @@ class System:
         self.motor = Motor(motor_speed_pin, motor_forward_pin, motor_reverse_pin)
         # Initialize the angular encoder.
         self.encoder_angular = Encoder(encoder_clock_pin, encoder_angular_cs_pin, encoder_data_pin)
-        self.encoder_angular.set_zero()
+        self.encoder_angular.set_zero(offset = 512) # set offset so that 0 is upright vertical
         # Initialize the linear encoder.
         self.encoder_linear = Linear_Encoder(encoder_clock_pin, encoder_linear_cs_pin, encoder_data_pin)
         # We assume that the system has been initialized on startup to a 0 position, or that the previous run ended by returning the system to 0
@@ -63,12 +63,14 @@ class System:
         # NOTE: If only one limit has been defined, this should always work (hardware limits will be the absolute edge on the undefined side, although this would be difficult for users to utilize unless we provide the position of the hardware limits on each side
         # NOTE: If neither limit is defined, the hardware limits will be the only limits in effect.
         
+        self.angular_units = angular_units
+        
         # Create and setup results file (to be sent back to the server and displayed/downloaded to the user)
         # Results file is a CSV with the following entries: angle, position, speed
         self.result_filename = "/home/pi/test_results/" + datetime.now().strftime("%d-%m-%Y_%H:%M:%S") + ".csv"
         
         result_file = open(self.result_filename, "w+")
-        result_file.write("angle(degrees),position(inches),speed(percentage)\n")
+        result_file.write("angle(" + angular_units + "),position(inches),speed(percentage)\n")
         result_file.close()
     # END __init__()
     
@@ -124,9 +126,10 @@ class System:
     #####       Positive values indicate the pendulum is right-of-center.
     #####       Negative values indicate the pendulum is left-of-center.
     def measure(self):
-        angular_position = self.encoder_angular.read_position('Degrees')
-        if angular_position > 180:
-            angular_position = angular_position - 360
+        angular_position = self.encoder_angular.read_position(self.angular_units)
+        if self.angular_units == 'Degrees':
+            if angular_position > 180.:
+                angular_position = angular_position - 360.
         linear_position = self.encoder_linear.read_position()
         # Check soft limits
         if not math.isnan(self.negative_soft_limit) and linear_position < self.negative_soft_limit:
@@ -152,10 +155,10 @@ class System:
     #####      Positive values will move the pendulum to the right.
     def adjust(self, speed):
         # cap the speed inputs
-        if speed > 100.0:
-            speed = 100.0
-        if speed < -100.0:
-            speed = -100.0
+        if speed > 100.:
+            speed = 100.
+        if speed < -100.:
+            speed = -100.
         # change the motor speed
         # TODO: Make sure the motor is oriented so that positive speed the correct direction (same for negative). Change the values otherwise.
         self.motor.coast()
@@ -167,9 +170,9 @@ class System:
         # open the results file
         result_file = open(self.result_filename, "a")
         # Write the results
-        result_file.write("%d," % angle)    # Write angle
-        result_file.write("%d," % position) # Write position
-        result_file.write("%d\n" % speed)   # Write speed (end of line)
+        result_file.write("%f," % angle)    # Write angle
+        result_file.write("%f," % position) # Write position
+        result_file.write("%f\n" % speed)   # Write speed (end of line)
         # Close the results file
         result_file.close()
     # END add_results
@@ -180,10 +183,12 @@ class System:
         # slowly move towards 0 until we get there
         if position > 0:
             self.motor.move(-4)
+            while position > 0:
+                position = self.encoder_linear.read_position()
         elif position < 0:
             self.motor.move(4)
-        while not position == 0:
-            position = self.encoder_linear.read_position()
+            while position < 0:
+                position = self.encoder_linear.read_position()
         self.motor.brake()
     # END return_home
     
