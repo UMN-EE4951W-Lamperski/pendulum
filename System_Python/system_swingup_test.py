@@ -82,8 +82,8 @@ class SwingUpEnv():
         state = self.state
         x, x_dot, theta, theta_dot = state
         force = self.force_mag * action[0]
-		self.sys.adjust(force)
-		
+        self.sys.adjust(force)
+
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
 
@@ -94,12 +94,12 @@ class SwingUpEnv():
         else:
             self.up_time = 0
         
-		new_theta, new_x = self.sys.measure()
-		new_theta = radians(new_theta)
-		theta_dot = (new_theta - theta) / self.tau
+        new_theta, new_x = self.sys.measure()
+        new_theta = radians(new_theta)
+        theta_dot = (new_theta - theta) / self.tau
         x_dot = (new_x - x) / self.tau
-		self.state = (new_x, x_dot, new_theta, theta_dot)
-		
+        self.state = (new_x, x_dot, new_theta, theta_dot)
+
         done =  x < -self.x_threshold \
                 or x > self.x_threshold \
                 or theta_dot < -self.theta_dot_threshold \
@@ -121,10 +121,10 @@ class SwingUpEnv():
         return np.array(self.state), reward, done, {'max_up_time' : self.max_up_time}
 
     def reset(self):
-		self.sys.return_home()
-		time.sleep(1)
-		self.state = (0, 0, np.pi, 0)
-		
+        self.sys.return_home()
+        time.sleep(1)
+        self.state = (0, 0, np.pi, 0)
+
         self.up_time = 0
         self.max_up_time = 0
         self.up = False
@@ -219,7 +219,7 @@ class sarsaAgent:
             self.r_last = np.copy(r)
 
 # This is the environment
-env = swingUp.SwingUpEnv()
+env = SwingUpEnv()
 
 # For simplicity, we only consider forces of -1 and 1
 numActions = 2
