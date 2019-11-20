@@ -10,12 +10,12 @@ def control_function(angle):
     return (abs(angle) / 180.0) * 100.0
         
 # Main program
-sys = System()
+sys = System(angular_units = 'Radians')
 while 1:
     angle, linear = sys.measure()
-    #print(angle)
-    speed = control_function(angle)
+    print(angle)
+    """speed = control_function(angle)
     print(speed)
-    sys.adjust(speed)
+    sys.adjust(speed)"""
     time.sleep(0.05)
     

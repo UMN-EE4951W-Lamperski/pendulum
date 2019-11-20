@@ -3,7 +3,7 @@ import time
 
 # Decide which pins to hook up to on the Pi before running
 clk_pin = 2
-cs_pin  = 4
+cs_pin  = 14
 data_pin = 3
 
 e = Encoder(clk_pin, cs_pin, data_pin)

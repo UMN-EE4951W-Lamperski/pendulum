@@ -6,6 +6,7 @@ from datetime import datetime
 from time import sleep
 import RPi.GPIO as GPIO
 import sys
+import os
 
 # IO pin definitions
 ### Motor pins
@@ -67,7 +68,7 @@ class System:
         
         # Create and setup results file (to be sent back to the server and displayed/downloaded to the user)
         # Results file is a CSV with the following entries: angle, position, speed
-        self.result_filename = "/home/pi/test_results/" + datetime.now().strftime("%d-%m-%Y_%H:%M:%S") + ".csv"
+        self.result_filename = "Results/" + os.path.basename(sys.argv[0]).split('.')[0] + "_results.csv"
         
         result_file = open(self.result_filename, "w+")
         result_file.write("angle(" + angular_units + "),position(inches),speed(percentage)\n")
