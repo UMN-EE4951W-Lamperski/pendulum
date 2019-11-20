@@ -94,7 +94,7 @@ class System:
         pressed = True
         while pressed != False:
             # We must continue reading linear encoder motion to keep track of rotations
-            self.encoder_linear.read_position()
+            position = self.encoder_linear.read_position()
             pressed = GPIO.input(limit_positive_pin)
             sleep(0.01)
         #GPIO.wait_for_edge(limit_positive_pin, GPIO.FALLING)
@@ -115,6 +115,12 @@ class System:
         GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
         GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
     # END initialize
+    
+    # Return home, cleanup IO. This should be called when exiting the program
+    def deinitialize(self):
+        self.return_home()
+        self.motor.brake()
+        GPIO.cleanup()
     
     # Get the values of the encoders to determine the angular and linear position of the pendulum.
     # Values are returned as a tuple: (angle, linear).
@@ -185,11 +191,16 @@ class System:
             self.motor.move(-4)
             while position > 0:
                 position = self.encoder_linear.read_position()
+                sleep(0.01)
+            self.motor.brake()
+            return
         elif position < 0:
             self.motor.move(4)
             while position < 0:
                 position = self.encoder_linear.read_position()
-        self.motor.brake()
+                sleep(0.01)
+            self.motor.brake()
+            return
     # END return_home
     
     # Callback for when negative limit switch is triggered.
@@ -214,7 +225,7 @@ class System:
     # END positive_limit_callback
     def limit_triggered(self):
         sleep(1)
-        self.return_home()
+        self.deinitialize()
         sys.exit(1)
 # END System
 

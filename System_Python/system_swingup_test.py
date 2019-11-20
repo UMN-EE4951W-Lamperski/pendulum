@@ -8,6 +8,7 @@ from gym.utils import seeding
 
 from system import System
 import time
+from sys import exit
 
 class SwingUpEnv():
     """
@@ -54,8 +55,8 @@ class SwingUpEnv():
     def __init__(self):
         self.sys = System(angular_units='Radians')
 		
-        self.force_mag = 10.0
-        self.tau = 0.02  # seconds between state updates
+        self.force_mag = 10.
+        self.last_time = time.time()  # time for seconds between updates
 
         # Angle at which to fail the episode
         self.x_threshold = 10.
@@ -93,10 +94,14 @@ class SwingUpEnv():
 
         else:
             self.up_time = 0
+
+        current_time = time.time()
+        tau = current_time - self.last_time
+        self.last_time = current_time
         
         new_theta, new_x = self.sys.measure()
-        theta_dot = (new_theta - theta) / self.tau
-        x_dot = (new_x - x) / self.tau
+        theta_dot = (new_theta - theta) / tau
+        x_dot = (new_x - x) / tau
         self.state = (new_x, x_dot, new_theta, theta_dot)
         self.sys.add_results(new_theta, new_x, force)
 
@@ -120,16 +125,23 @@ class SwingUpEnv():
 
         return np.array(self.state), reward, done, {'max_up_time' : self.max_up_time}
 
-    def reset(self):
-        self.sys.return_home()
+    def reset(self, home = True):
+        if home == True:
+            self.sys.return_home()
         time.sleep(1)
-        self.state = (0, 0, np.pi, 0)
+        init_ang, lin = self.sys.measure()
+        time.sleep(0.05)
+        ang, lin = self.sys.measure()
+        self.state = (0, 0, ang, (ang-init_ang)/0.05)
 
         self.up_time = 0
         self.max_up_time = 0
         self.up = False
         self.steps_beyond_done = None
         return np.array(self.state)
+        
+    def end(self):
+        self.sys.deinitialize()
 
 
 class nnQ(pt.nn.Module):
@@ -181,7 +193,7 @@ class sarsaAgent:
         # This is an epsilon greedy selection
         a = 0
         if rnd.rand() < self.epsilon:
-            a = rnd.randint(numActions)
+            a = rnd.randint(0, numActions)
         else:
             qBest = -np.inf
             for aTest in range(self.numActions):
@@ -223,14 +235,14 @@ class sarsaAgent:
 env = SwingUpEnv()
 
 # For simplicity, we only consider forces of -1 and 1
-numActions = 2
+numActions = 5
 Actions = np.linspace(-1, 1, numActions)
 
 # This is our learning agent
 gamma = .95
 agent = sarsaAgent(5, numActions, 20, 1, epsilon = 5e-2, gamma = gamma, alpha = 1e-5)
 
-maxSteps = 2e5
+maxSteps = 5e4
 
 # This is a helper to deal with the fact that x[2] is actually an angle
 x_to_y = lambda x : np.array([x[0], x[1], np.cos(x[2]), np.sin(x[2]), x[3]])
@@ -240,36 +252,42 @@ UpTime = []
 
 step = 0
 ep = 0
-while step < maxSteps:
-    ep += 1
-    x = env.reset()
-    C = 0.
-    
-    done = False
-    t = 1
-    while not done:
-        t += 1
-        step += 1
-        y = x_to_y(x)
-        a = agent.action(y)
-        u = Actions[a:a+1]
-        x_next, c, done, info = env.step(u)
+try:
+    while step < maxSteps:
+        ep += 1
+        x = env.reset(home = ep > 1)
+        C = 0.
         
-        max_up_time = info['max_up_time']
-        y_next = x_to_y(x_next)
+        done = False
+        t = 1
+        while not done:
+            t += 1
+            step += 1
+            y = x_to_y(x)
+            a = agent.action(y)
+            u = Actions[a:a+1]
+            x_next, c, done, info = env.step(u)
+            
+            max_up_time = info['max_up_time']
+            y_next = x_to_y(x_next)
 
-        C += (1./t) * (c - C)
-        agent.update(y, a, c, y_next, done)
-        x = x_next
-        if done:
-            break
+            C += (1./t) * (c - C)
+            agent.update(y, a, c, y_next, done)
+            x = x_next
+            if done:
+                break
+                
+            if step >= maxSteps:
+                break
+                
             
-        if step >= maxSteps:
-            break
-            
-        
-        R.append(C)
-    UpTime.append(max_up_time)
-    #print('t:',ep+1,', R:',C,', L:',t-1,', G:',G,', Q:', Q_est, 'U:', max_up_time)
-    print('Episode:',ep, 'Total Steps:',step, ', Ave. Reward:',C, ', Episode Length:',t-1, 'Max Up-Time:',max_up_time)
-env.close()
+            R.append(C)
+        UpTime.append(max_up_time)
+        #print('t:',ep+1,', R:',C,', L:',t-1,', G:',G,', Q:', Q_est, 'U:', max_up_time)
+        print('Episode:',ep, 'Total Steps:',step, ', Ave. Reward:',C, ', Episode Length:',t-1, 'Max Up-Time:',max_up_time)
+except:
+    env.end()
+    exit(-1)
+finally:
+    env.end()
+    exit(0)

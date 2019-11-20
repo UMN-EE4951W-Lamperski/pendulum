@@ -34,7 +34,8 @@ class Encoder:
         time.sleep(0.5)
     def set_zero(self, offset = 0):
         # Take current position as zero
-        self.offset = self.read_position('Raw') - offset
+        pos = self.read_position('Raw')
+        self.offset = (self.read_position('Raw') + self.offset + offset) % 1024
     def clockup(self):
         GPIO.output(self.clk_pin, 1)
     def clockdown(self):
