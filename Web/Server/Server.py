@@ -19,62 +19,62 @@ PI_URL = 'http://localhost:8000'
 RESULTS_DESTINATION = "Results/results.txt"
 
 def allowed_file(filename):
-	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-	
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    
 @app.route('/')
 def home():
-	return render_template('index.html')
+    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-	if request.method == 'POST':
+    if request.method == 'POST':
         # Check if the post request has the file part
-		if 'file' not in request.files:
-			flash('No file part')
-			return redirect(request.url)
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
 
-		# Grab the file
-		file = request.files['file']
-		if file.filename == '':
-			flash('No file selected for uploading')
-			return redirect(request.url)
+        # Grab the file
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected for uploading')
+            return redirect(request.url)
 
-		# Send the file content as a post to the PI
-		if file and allowed_file(file.filename):
+        # Send the file content as a post to the PI
+        if file and allowed_file(file.filename):
 
-			dictToSend = {'filename':file.filename, 'file_content':file.read()}
-			file.close
-			print('Running test')
-			flash('Running test')
-			response = requests.post(PI_URL + '/tests/endpoint', json=dictToSend)
-			
-			results_filename = json.loads(response.text)[u'results_filename']
-			results_content = json.loads(response.text)[u'results_content']
-			flash('Results file:' + results_filename)
-			flash('Response from server:' + results_content)
-			
-			results = open(RESULTS_DESTINATION, "w")
-			results.write(results_content)
-			results.close()
+            dictToSend = {'filename':file.filename, 'file_content':file.read()}
+            file.close
+            print('Running test')
+            flash('Running test')
+            response = requests.post(PI_URL + '/tests/endpoint', json=dictToSend)
+            
+            results_filename = json.loads(response.text)[u'results_filename']
+            results_content = json.loads(response.text)[u'results_content']
+            flash('Results file:' + results_filename)
+            flash('Response from server:' + results_content)
+            
+            results = open(RESULTS_DESTINATION, "w")
+            results.write(results_content)
+            results.close()
 
-			return render_template('index.html', results = 'True')
-		else:
-			flash('Allowed file types are .py')
-			return redirect(request.url)
+            return render_template('index.html', results = 'True')
+        else:
+            flash('Allowed file types are .py')
+            return redirect(request.url)
 
 @app.route('/results', methods=['GET'])
 def download():
-	# Grab content from results file
-	with open(RESULTS_DESTINATION, 'r') as results:
-		results_content = results.read()
-		results.close()
+    # Grab content from results file
+    with open(RESULTS_DESTINATION, 'r') as results:
+        results_content = results.read()
+        results.close()
 
-	# Put content as a download file 
-	return Response(
-		results_content,
-		mimetype="text/csv",
-		headers={"Content-disposition":
-					"attachment; filename=results.csv"})
+    # Put content as a download file 
+    return Response(
+        results_content,
+        mimetype="text/csv",
+        headers={"Content-disposition":
+                    "attachment; filename=results.csv"})
 
 if __name__ == "__main__":
     app.run(host="localhost", port=5000)
