@@ -41,13 +41,14 @@ def upload_file():
 
 		# Send the file content as a post to the PI
 		if file and allowed_file(file.filename):
+
 			dictToSend = {'filename':file.filename, 'file_content':file.read()}
 			file.close
 			print('Running test')
 			flash('Running test')
 			response = requests.post(PI_URL + '/tests/endpoint', json=dictToSend)
 			
-			results_filename = json.loads(response.text)[u'results_filename'] .encode("ascii")
+			results_filename = json.loads(response.text)[u'results_filename'].encode("ascii")
 			results_content = json.loads(response.text)[u'results_content'].encode("ascii")
 			flash('Results file:' + results_filename)
 			flash('Response from server:' + results_content)
@@ -58,7 +59,7 @@ def upload_file():
 
 			return render_template('index.html', results = 'True')
 		else:
-			flash('Allowed file types are txt, pdf, png, jpg, jpeg, gif')
+			flash('Allowed file types are .py')
 			return redirect(request.url)
 
 @app.route('/results', methods=['GET'])
