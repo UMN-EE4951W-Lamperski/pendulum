@@ -16,6 +16,9 @@ ALLOWED_EXTENSIONS = set(['py'])
 
 PI_URL = 'http://localhost:8000'
 
+# UNCOMMENT IF RUNNING PI.PY ON PI
+#PI_URL = 'http://192.168.1.10:8000'
+
 RESULTS_DESTINATION = "Results/results.txt"
 
 def allowed_file(filename):
@@ -45,7 +48,6 @@ def upload_file():
             dictToSend = {'filename':file.filename, 'file_content':file.read()}
             file.close
             print('Running test')
-            flash('Running test')
             response = requests.post(PI_URL + '/tests/endpoint', json=dictToSend)
             
             results_filename = json.loads(response.text)[u'results_filename']
