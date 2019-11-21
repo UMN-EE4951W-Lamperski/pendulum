@@ -9,10 +9,10 @@ import requests
 import json
 
 app = Flask(__name__)
-app.secret_key = "secret key"
+app.secret_key = "ski u mah"
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'py'])
+ALLOWED_EXTENSIONS = set(['py'])
 
 PI_URL = 'http://localhost:8000'
 
@@ -22,8 +22,8 @@ def allowed_file(filename):
 	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 	
 @app.route('/')
-def upload_form():
-	return render_template('upload.html')
+def home():
+	return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -41,30 +41,34 @@ def upload_file():
 
 		# Send the file content as a post to the PI
 		if file and allowed_file(file.filename):
-			dictToSend = {'file_content':file.read()}
+			dictToSend = {'filename':file.filename, 'file_content':file.read()}
 			file.close
 			print('Running test')
 			flash('Running test')
 			response = requests.post(PI_URL + '/tests/endpoint', json=dictToSend)
-			contents = json.loads(response.text)[u'results_content']
-			flash('Response from server:' + contents)
-
+			
+			results_filename = json.loads(response.text)[u'results_filename'] .encode("ascii")
+			results_content = json.loads(response.text)[u'results_content'].encode("ascii")
+			flash('Results file:' + results_filename)
+			flash('Response from server:' + results_content)
+			
 			results = open(RESULTS_DESTINATION, "w")
-			results.write(contents)
+			results.write(results_content)
 			results.close()
 
-			return render_template('upload.html', results = 'True')
+			return render_template('index.html', results = 'True')
 		else:
 			flash('Allowed file types are txt, pdf, png, jpg, jpeg, gif')
 			return redirect(request.url)
 
-@app.route('/results', methods=['GET'])# this is a job for GET, not POST
+@app.route('/results', methods=['GET'])
 def download():
-	print("in downlaods")
+	# Grab content from results file
 	with open(RESULTS_DESTINATION, 'r') as results:
 		results_content = results.read()
 		results.close()
-	print("results_content")
+
+	# Put content as a download file 
 	return Response(
 		results_content,
 		mimetype="text/csv",
