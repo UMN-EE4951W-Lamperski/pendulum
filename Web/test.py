@@ -9,7 +9,7 @@ now = datetime.now()
 current_time = now.strftime("%H:%M:%S")
 print("Current Time = " + current_time)
 
-f = open("Results/" + file_name + "_results", "w+")
+f = open("Results/" + file_name + "_results.csv", "w+")
 f.write("THIS IS RESULTS TEXT\n")
 f.write("Current Time = " + current_time)
 f.close()

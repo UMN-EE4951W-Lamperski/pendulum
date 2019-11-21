@@ -19,7 +19,7 @@ PI_URL = 'http://localhost:8000'
 # UNCOMMENT IF RUNNING PI.PY ON PI
 #PI_URL = 'http://192.168.1.10:8000'
 
-RESULTS_DESTINATION = "Results/results.txt"
+RESULTS_DESTINATION = "Results/results.csv"
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

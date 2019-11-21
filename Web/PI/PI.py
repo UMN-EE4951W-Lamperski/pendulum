@@ -29,7 +29,7 @@ def my_test_endpoint():
 
     # Get results file
     results_filename = filename.split(".")[0]
-    results_filename = results_filename + "_results"
+    results_filename = results_filename + "_results.csv"
     with open(RESULTS_DESTINATION + results_filename, 'r') as results:
         results_content = results.read()
         results.close()
@@ -44,3 +44,5 @@ def my_test_endpoint():
 
 if __name__ == '__main__':
     app.run(host="localhost", port=8000)
+    # UNCOMMENT IF RUNNING PI.PI ON PI
+    #app.run(host="192.168.1.10", port=8000)
