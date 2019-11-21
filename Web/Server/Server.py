@@ -48,8 +48,8 @@ def upload_file():
 			flash('Running test')
 			response = requests.post(PI_URL + '/tests/endpoint', json=dictToSend)
 			
-			results_filename = json.loads(response.text)[u'results_filename'].encode("ascii")
-			results_content = json.loads(response.text)[u'results_content'].encode("ascii")
+			results_filename = json.loads(response.text)[u'results_filename']
+			results_content = json.loads(response.text)[u'results_content']
 			flash('Results file:' + results_filename)
 			flash('Response from server:' + results_content)
 			
