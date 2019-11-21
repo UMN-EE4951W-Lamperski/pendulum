@@ -8,6 +8,10 @@ UPLOAD_DESTINATION = "Uploads/upload.py"
 
 RESULTS_DESTINATION = "Results/results.txt"
 
+@app.route('/')
+def home():
+    return "ANDI'S PIE"
+
 @app.route('/tests/endpoint', methods=['POST'])
 def my_test_endpoint():
     # Receive post
@@ -20,7 +24,7 @@ def my_test_endpoint():
     upload.close()
 
     # Run python script
-    subprocess.call(["python", UPLOAD_DESTINATION], shell=True)
+    subprocess.call(["python", UPLOAD_DESTINATION])
 
     # Get results file
     with open(RESULTS_DESTINATION, 'r') as results:
