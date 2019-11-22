@@ -48,9 +48,9 @@ class System:
         
         # Enable hardware interrupts for hardware limit switches
         GPIO.setup(limit_negative_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
+        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback)
         GPIO.setup(limit_positive_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
+        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback)
         
         # Setup soft limits if defined by the user (this is "challenge mode" for the user, making the constraints more difficult).
         # By default, the soft limits will not be used (when set NaN), and the whole extent of the system is available (to the HW limits).
@@ -139,14 +139,14 @@ class System:
                 angular_position = angular_position - 360.
         linear_position = self.encoder_linear.read_position()
         # Check soft limits
-        if not math.isnan(self.negative_soft_limit) and linear_position < self.negative_soft_limit:
+        if (not math.isnan(self.negative_soft_limit) and linear_position < self.negative_soft_limit) or linear_position < self.min_x:
             # Print negative soft limit violation to the results file.
             result_file = open(self.result_filename, "a")
             result_file.write("Negative software limit %f has been reached!" % self.negative_soft_limit)
             result_file.close()
             # Fire the limit trigger method (stops motor, kills program immediately).
             self.limit_triggered()
-        if not math.isnan(self.positive_soft_limit) and linear_position > self.positive_soft_limit:
+        if (not math.isnan(self.positive_soft_limit) and linear_position > self.positive_soft_limit) or linear_position > self.max_x:
             # Print positive soft limit violation to the results file.
             result_file = open(self.result_filename, "a")
             result_file.write("Positive software limit %f has been reached!" % self.positive_soft_limit)
@@ -161,15 +161,18 @@ class System:
     #####      Negative values will move the pendulum to the left.
     #####      Positive values will move the pendulum to the right.
     def adjust(self, speed):
-        # cap the speed inputs
-        if speed > 100.:
-            speed = 100.
-        if speed < -100.:
-            speed = -100.
-        # change the motor speed
-        # TODO: Make sure the motor is oriented so that positive speed the correct direction (same for negative). Change the values otherwise.
-        self.motor.coast()
-        self.motor.move(speed)
+        if speed != 0:
+            # cap the speed inputs
+            if speed > 100.:
+                speed = 100.
+            if speed < -100.:
+                speed = -100.
+            # change the motor speed
+            # TODO: Make sure the motor is oriented so that positive speed the correct direction (same for negative). Change the values otherwise.
+            self.motor.coast()
+            self.motor.move(speed)
+        else:
+            self.motor.coast()
     # END adjust()
     
     # Append data to the results file
@@ -195,7 +198,7 @@ class System:
                 sleep(0.01)
             self.motor.brake()
             return
-        elif position < 0:
+        else:
             self.motor.move(4)
             while position < 0:
                 position = self.encoder_linear.read_position()
@@ -209,7 +212,7 @@ class System:
         self.motor.brake()
         # Print negative limit trigger to the results file.
         result_file = open(self.result_filename, "a")
-        result_file.write("Negative hardware limit has been reached!")
+        result_file.write("Negative hardware limit has been reached!\n")
         result_file.close()
         # Fire the limit trigger method (stops motor, kills program immediately).
         self.limit_triggered()
@@ -219,7 +222,7 @@ class System:
         self.motor.brake()
         # Print positive limit trigger to the results file.
         result_file = open(self.result_filename, "a")
-        result_file.write("Positive hardware limit has been reached!")
+        result_file.write("Positive hardware limit has been reached!\n")
         result_file.close()
         # Fire the limit trigger method (stops motor, kills program immediately).
         self.limit_triggered()
