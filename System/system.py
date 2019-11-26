@@ -7,6 +7,7 @@ from time import sleep
 import RPi.GPIO as GPIO
 import sys
 import os
+from threading import Thread
 
 # IO pin definitions
 ### Motor pins
@@ -31,7 +32,7 @@ system_min_x = -16.5
 # System Class
 # This is the primary interface a student will use to control the pendulum.
 class System:
-    def __init__(self, negative_limit=float('nan'), positive_limit=float('nan'), angular_units='Degrees'):
+    def __init__(self, negative_limit=float('nan'), positive_limit=float('nan'), angular_units='Degrees', sw_limit_routine=self.limit_triggered):
         GPIO.setwarnings(False)
         # Initialize public variables
         self.max_x = system_max_x
@@ -45,6 +46,12 @@ class System:
         self.encoder_linear = Linear_Encoder(encoder_clock_pin, encoder_linear_cs_pin, encoder_data_pin)
         # We assume that the system has been initialized on startup to a 0 position, or that the previous run ended by returning the system to 0
         self.encoder_linear.set_zero()
+        
+        # Setup a thread to constantly be measuring encoder positions
+        self.encoder_thread = Thread(target = self.encoder_thread_routine)
+        self.angular_position = 0.
+        self.linear_position = 0.
+        self.encoder_thread.start()
         
         # Enable hardware interrupts for hardware limit switches
         GPIO.setup(limit_negative_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -64,6 +71,7 @@ class System:
             self.positive_soft_limit = float('nan')
         # NOTE: If only one limit has been defined, this should always work (hardware limits will be the absolute edge on the undefined side, although this would be difficult for users to utilize unless we provide the position of the hardware limits on each side
         # NOTE: If neither limit is defined, the hardware limits will be the only limits in effect.
+        self.sw_limit_routine = sw_limit_routine
         
         self.angular_units = angular_units
         
@@ -122,6 +130,7 @@ class System:
     def deinitialize(self):
         self.return_home()
         self.motor.brake()
+        self.encoder_thread.terminate()
         GPIO.cleanup()
     
     # Get the values of the encoders to determine the angular and linear position of the pendulum.
@@ -134,28 +143,43 @@ class System:
     #####       Positive values indicate the pendulum is right-of-center.
     #####       Negative values indicate the pendulum is left-of-center.
     def measure(self):
+        return (self.angular_position, self.linear_position)
+    # END measure()
+    
+    # Thread routine (0.1s interval). Get the values of the encoders to determine the angular and linear position of the pendulum.
+    # Values are saved in the class (self.angular_position and self.linear_position), which are then simply returned by measure()
+    def encoder_thread_routine(self):
         angular_position = self.encoder_angular.read_position(self.angular_units)
         if self.angular_units == 'Degrees':
             if angular_position > 180.:
                 angular_position = angular_position - 360.
-        linear_position = self.encoder_linear.read_position()
+        self.angular_position = angular_position
+        self.linear_position = self.encoder_linear.read_position()
         # Check soft limits
-        if (not math.isnan(self.negative_soft_limit) and linear_position < self.negative_soft_limit) or linear_position < self.min_x:
+        if (not math.isnan(self.negative_soft_limit) and self.linear_position < self.negative_soft_limit) or self.linear_position < self.min_x:
+            # SW limit reached: stop the motor, set the interrupted flag so that the motor cannot continue to move until the interrupt has been completely serviced
+            #self.interrupted = True
+            self.motor.brake()
             # Print negative soft limit violation to the results file.
             result_file = open(self.result_filename, "a")
             result_file.write("Negative software limit %f has been reached!" % self.negative_soft_limit)
             result_file.close()
             # Fire the limit trigger method (stops motor, kills program immediately).
-            self.limit_triggered()
-        if (not math.isnan(self.positive_soft_limit) and linear_position > self.positive_soft_limit) or linear_position > self.max_x:
+            self.sw_limit_routine()
+        if (not math.isnan(self.positive_soft_limit) and self.linear_position > self.positive_soft_limit) or self.linear_position > self.max_x:
+            # SW limit reached: stop the motor, set the interrupted flag so that the motor cannot continue to move until the interrupt has been completely serviced
+            #self.interrupted = True
+            self.motor.brake()
             # Print positive soft limit violation to the results file.
             result_file = open(self.result_filename, "a")
             result_file.write("Positive software limit %f has been reached!" % self.positive_soft_limit)
             result_file.close()
             # Fire the limit trigger method (stops motor, kills program immediately).
-            self.limit_triggered()
-        return (angular_position, linear_position)
-    # END measure()
+            self.sw_limit_routine()
+            # If this point is reached, the SW limit routine was user-defined and did not kill the program - un-set the 'interrupted' flag
+            #self.interrupted = False
+        # This thread should run on ~0.1s intervals
+        sleep(0.1)
     
     # Adjust the pendulum's linear position using the motor.
     ### speed: Acceptable values range from -100 to 100 (as a percentage), with 100/-100 being the maximum adjustment speed.
