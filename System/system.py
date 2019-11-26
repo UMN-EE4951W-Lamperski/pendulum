@@ -51,6 +51,7 @@ class System:
         GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback)
         GPIO.setup(limit_positive_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback)
+        self.interrupted = False
         
         # Setup soft limits if defined by the user (this is "challenge mode" for the user, making the constraints more difficult).
         # By default, the soft limits will not be used (when set NaN), and the whole extent of the system is available (to the HW limits).
@@ -161,18 +162,19 @@ class System:
     #####      Negative values will move the pendulum to the left.
     #####      Positive values will move the pendulum to the right.
     def adjust(self, speed):
-        if speed != 0:
-            # cap the speed inputs
-            if speed > 100.:
-                speed = 100.
-            if speed < -100.:
-                speed = -100.
-            # change the motor speed
-            # TODO: Make sure the motor is oriented so that positive speed the correct direction (same for negative). Change the values otherwise.
-            self.motor.coast()
-            self.motor.move(speed)
-        else:
-            self.motor.coast()
+        if self.interrupted == False:
+            if speed != 0:
+                # cap the speed inputs
+                if speed > 100.:
+                    speed = 100.
+                if speed < -100.:
+                    speed = -100.
+                # change the motor speed
+                # TODO: Make sure the motor is oriented so that positive speed the correct direction (same for negative). Change the values otherwise.
+                self.motor.coast()
+                self.motor.move(speed)
+            else:
+                self.motor.coast()
     # END adjust()
     
     # Append data to the results file
@@ -209,6 +211,7 @@ class System:
     
     # Callback for when negative limit switch is triggered.
     def negative_limit_callback(self, channel):
+        self.interrupted = True
         self.motor.brake()
         # Print negative limit trigger to the results file.
         result_file = open(self.result_filename, "a")
@@ -219,6 +222,7 @@ class System:
     # END negative_limit_callback
     # Callback for when positive limit switch is triggered.
     def positive_limit_callback(self, channel):
+        self.interrupted = True
         self.motor.brake()
         # Print positive limit trigger to the results file.
         result_file = open(self.result_filename, "a")
