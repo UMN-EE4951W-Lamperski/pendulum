@@ -51,7 +51,7 @@ class System:
         GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback)
         GPIO.setup(limit_positive_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback)
-		self.interrupted = False
+        self.interrupted = False
         
         # Setup soft limits if defined by the user (this is "challenge mode" for the user, making the constraints more difficult).
         # By default, the soft limits will not be used (when set NaN), and the whole extent of the system is available (to the HW limits).
