@@ -7,6 +7,7 @@ from time import sleep
 import RPi.GPIO as GPIO
 import sys
 import os
+from threading import Thread, Lock
 
 # IO pin definitions
 ### Motor pins
@@ -31,8 +32,9 @@ system_min_x = -16.5
 # System Class
 # This is the primary interface a student will use to control the pendulum.
 class System:
-    def __init__(self, negative_limit=float('nan'), positive_limit=float('nan'), angular_units='Degrees'):
+    def __init__(self, negative_limit=float('nan'), positive_limit=float('nan'), angular_units='Degrees', sw_limit_routine=None):
         GPIO.setwarnings(False)
+        self.deinit = False
         # Initialize public variables
         self.max_x = system_max_x
         self.min_x = system_min_x
@@ -45,6 +47,8 @@ class System:
         self.encoder_linear = Linear_Encoder(encoder_clock_pin, encoder_linear_cs_pin, encoder_data_pin)
         # We assume that the system has been initialized on startup to a 0 position, or that the previous run ended by returning the system to 0
         self.encoder_linear.set_zero()
+        
+        self.angular_units = angular_units
         
         # Enable hardware interrupts for hardware limit switches
         GPIO.setup(limit_negative_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -64,8 +68,9 @@ class System:
             self.positive_soft_limit = float('nan')
         # NOTE: If only one limit has been defined, this should always work (hardware limits will be the absolute edge on the undefined side, although this would be difficult for users to utilize unless we provide the position of the hardware limits on each side
         # NOTE: If neither limit is defined, the hardware limits will be the only limits in effect.
-        
-        self.angular_units = angular_units
+        self.sw_limit_routine = self.limit_triggered
+        if sw_limit_routine is not None:
+            self.sw_limit_routine = sw_limit_routine
         
         # Create and setup results file (to be sent back to the server and displayed/downloaded to the user)
         # Results file is a CSV with the following entries: angle, position, speed
@@ -74,6 +79,14 @@ class System:
         result_file = open(self.result_filename, "w+")
         result_file.write("angle(" + angular_units + "),position(inches),speed(percentage)\n")
         result_file.close()
+        
+        # Setup a thread to constantly be measuring encoder positions
+        #self.encoder_thread = EncoderThread(instance = self)
+        self.encoder_thread = Thread(target = self.encoder_thread_routine)
+        self.encoder_thread.setDaemon(True)
+        self.angular_position = 0.
+        self.linear_position = 0.
+        self.encoder_thread.start()
     # END __init__()
     
     def initialize(self):
@@ -82,7 +95,7 @@ class System:
         GPIO.remove_event_detect(limit_positive_pin)
         # Begin moving slowly in the negative direction until the negative limit switch is triggered
         if not GPIO.input(limit_negative_pin) == False:
-            self.motor.move(-4)
+            self.motor.move(-5)
             pressed = True
             while pressed != False:
                 pressed = GPIO.input(limit_negative_pin)
@@ -92,24 +105,22 @@ class System:
         self.encoder_linear.set_zero()
         sleep(1)
         # Begin moving slowly in the positive direction until the positive limit switch is triggered
-        self.motor.move(4)
+        self.motor.move(5)
         pressed = True
         while pressed != False:
             # We must continue reading linear encoder motion to keep track of rotations
-            position = self.encoder_linear.read_position()
             pressed = GPIO.input(limit_positive_pin)
             sleep(0.01)
-        #GPIO.wait_for_edge(limit_positive_pin, GPIO.FALLING)
         self.motor.brake()
         # Get the current position (the extent of the track)
-        extent = self.encoder_linear.read_position()
+        extent = self.linear_position
         # Move back towards the center until we reach position extent/2
         position = extent
         sleep(1)
         self.motor.move(-4)
         while position >= (extent / 2.):
-            position = self.encoder_linear.read_position()
-            sleep(0.01) 
+            position = self.linear_position
+            sleep(0.015) 
         self.motor.brake()
         # Set zero again: this is the real zero
         self.encoder_linear.set_zero()
@@ -122,6 +133,10 @@ class System:
     def deinitialize(self):
         self.return_home()
         self.motor.brake()
+        self.deinit = True
+        if self.encoder_thread.isAlive():
+            self.encoder_thread.join()
+        sleep(1)
         GPIO.cleanup()
     
     # Get the values of the encoders to determine the angular and linear position of the pendulum.
@@ -134,28 +149,51 @@ class System:
     #####       Positive values indicate the pendulum is right-of-center.
     #####       Negative values indicate the pendulum is left-of-center.
     def measure(self):
-        angular_position = self.encoder_angular.read_position(self.angular_units)
-        if self.angular_units == 'Degrees':
-            if angular_position > 180.:
-                angular_position = angular_position - 360.
-        linear_position = self.encoder_linear.read_position()
-        # Check soft limits
-        if (not math.isnan(self.negative_soft_limit) and linear_position < self.negative_soft_limit) or linear_position < self.min_x:
-            # Print negative soft limit violation to the results file.
-            result_file = open(self.result_filename, "a")
-            result_file.write("Negative software limit %f has been reached!" % self.negative_soft_limit)
-            result_file.close()
-            # Fire the limit trigger method (stops motor, kills program immediately).
-            self.limit_triggered()
-        if (not math.isnan(self.positive_soft_limit) and linear_position > self.positive_soft_limit) or linear_position > self.max_x:
-            # Print positive soft limit violation to the results file.
-            result_file = open(self.result_filename, "a")
-            result_file.write("Positive software limit %f has been reached!" % self.positive_soft_limit)
-            result_file.close()
-            # Fire the limit trigger method (stops motor, kills program immediately).
-            self.limit_triggered()
-        return (angular_position, linear_position)
+        return (self.angular_position, self.linear_position)
     # END measure()
+    
+    
+    # Thread routine (0.1s interval). Get the values of the encoders to determine the angular and linear position of the pendulum.
+    # Values are saved in the class (self.angular_position and self.linear_position), which are then simply returned by measure()
+    def encoder_thread_routine(self):
+        limit_serviced = False
+        while self.deinit == False:
+            angular_position = self.encoder_angular.read_position(self.angular_units)
+            if self.angular_units == 'Degrees':
+                if angular_position > 180.:
+                    angular_position = angular_position - 360.
+            self.angular_position = angular_position
+            self.linear_position = self.encoder_linear.read_position()
+            # Check soft limits
+            if (not math.isnan(self.negative_soft_limit)) and self.linear_position < self.negative_soft_limit: #or self.linear_position < self.min_x:
+                if limit_serviced == False:
+                    limit_serviced = True
+                    # SW limit reached: stop the motor, set the interrupted flag so that the motor cannot continue to move until the interrupt has been completely serviced
+                    #self.interrupted = True
+                    self.motor.brake()
+                    # Print negative soft limit violation to the results file.
+                    result_file = open(self.result_filename, "a")
+                    result_file.write("Negative software limit %f has been reached!" % self.negative_soft_limit)
+                    result_file.close()
+                    # Fire the limit trigger method
+                    self.sw_limit_routine()
+            elif (not math.isnan(self.positive_soft_limit)) and self.linear_position > self.positive_soft_limit: #or self.linear_position > self.max_x:
+                if limit_serviced == False:
+                    limit_serviced = True
+                    # SW limit reached: stop the motor, set the interrupted flag so that the motor cannot continue to move until the interrupt has been completely serviced
+                    #self.interrupted = True
+                    self.motor.brake()
+                    # Print positive soft limit violation to the results file.
+                    result_file = open(self.result_filename, "a")
+                    result_file.write("Positive software limit %f has been reached!" % self.positive_soft_limit)
+                    result_file.close()
+                    # Fire the limit trigger method
+                    self.sw_limit_routine()
+            elif limit_serviced == True and self.linear_position > (self.negative_soft_limit+0.5) and self.linear_position < (self.positive_soft_limit-0.5):
+                # Clear the limit service flag once we return to a reasonable range that the limit will not trigger again
+                limit_serviced = False
+            # This thread should run on ~0.01s intervals
+            sleep(0.01)
     
     # Adjust the pendulum's linear position using the motor.
     ### speed: Acceptable values range from -100 to 100 (as a percentage), with 100/-100 being the maximum adjustment speed.
@@ -191,20 +229,20 @@ class System:
     
     # Go back to the zero position (linear) so that the next execution starts in the correct place.
     def return_home(self):
-        position = self.encoder_linear.read_position()
+        position = self.linear_position
         # slowly move towards 0 until we get there
         if position > 0:
             self.motor.move(-4)
             while position > 0:
-                position = self.encoder_linear.read_position()
-                sleep(0.01)
+                position = self.linear_position
+                sleep(0.015)
             self.motor.brake()
             return
         else:
             self.motor.move(4)
             while position < 0:
-                position = self.encoder_linear.read_position()
-                sleep(0.01)
+                position = self.linear_position
+                sleep(0.015)
             self.motor.brake()
             return
     # END return_home
