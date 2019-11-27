@@ -53,13 +53,13 @@ class SwingUpEnv():
     }
 
     def __init__(self):
-        self.sys = System(angular_units='Radians', positive_limit=10., negative_limit=-10., sw_limit_routine=self.x_threshold_routine)
+        self.x_threshold = 14.
+        self.sys = System(angular_units='Radians', positive_limit=self.x_threshold, negative_limit=-self.x_threshold, sw_limit_routine=self.x_threshold_routine)
 		
-        self.force_mag = 10.
+        self.force_mag = 11.
         self.last_time = time.time()  # time for seconds between updates
 
         # Angle at which to fail the episode
-        self.x_threshold = 10.
         self.x_dot_threshold = 10.
         self.theta_dot_threshold = 3*np.pi
 
@@ -134,6 +134,7 @@ class SwingUpEnv():
         return np.array(self.state), reward, done, {'max_up_time' : self.max_up_time}
 
     def x_threshold_routine(self):
+        print("SW Limit reached!")
         self.done = True
         self.sys.adjust(0)
 
@@ -311,14 +312,16 @@ class sarsaAgent:
 env = SwingUpEnv()
 
 # For simplicity, we only consider forces of -1 and 1
-numActions = 5
+numActions = 2
 Actions = np.linspace(-1, 1, numActions)
 
 # This is our learning agent
 gamma = .95
-agent = sarsaAgent(5, numActions, 20, 1, epsilon = 5e-2, gamma = gamma, alpha = 1e-5)
+#agent = sarsaAgent(5, numActions, 20, 1, epsilon = 5e-2, gamma = gamma, alpha = 1e-5)
+agent = deepQagent(5,numActions,20,2,epsilon=5e-2,gamma=gamma,batch_size=20,
+                   c= 100,alpha=1e-4)
 
-maxSteps = 5e4
+maxSteps = 2e5
 
 # This is a helper to deal with the fact that x[2] is actually an angle
 x_to_y = lambda x : np.array([x[0], x[1], np.cos(x[2]), np.sin(x[2]), x[3]])
