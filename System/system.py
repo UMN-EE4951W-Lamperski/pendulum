@@ -77,7 +77,7 @@ class System:
         self.result_filename = "Results/" + os.path.basename(sys.argv[0]).split('.')[0] + "_results.csv"
         
         result_file = open(self.result_filename, "w+")
-        result_file.write("angle(" + angular_units + "),position(inches),speed(percentage)\n")
+        result_file.write("timestamp,angle(" + angular_units + "),position(inches),speed(percentage)\n")
         result_file.close()
         
         # Setup a thread to constantly be measuring encoder positions
@@ -173,7 +173,7 @@ class System:
                     self.motor.brake()
                     # Print negative soft limit violation to the results file.
                     result_file = open(self.result_filename, "a")
-                    result_file.write("Negative software limit %f has been reached!" % self.negative_soft_limit)
+                    result_file.write("Negative software limit %f has been reached!\n" % self.negative_soft_limit)
                     result_file.close()
                     # Fire the limit trigger method
                     self.sw_limit_routine()
@@ -185,7 +185,7 @@ class System:
                     self.motor.brake()
                     # Print positive soft limit violation to the results file.
                     result_file = open(self.result_filename, "a")
-                    result_file.write("Positive software limit %f has been reached!" % self.positive_soft_limit)
+                    result_file.write("Positive software limit %f has been reached!\n" % self.positive_soft_limit)
                     result_file.close()
                     # Fire the limit trigger method
                     self.sw_limit_routine()
@@ -220,12 +220,23 @@ class System:
         # open the results file
         result_file = open(self.result_filename, "a")
         # Write the results
-        result_file.write("%f," % angle)    # Write angle
-        result_file.write("%f," % position) # Write position
-        result_file.write("%f\n" % speed)   # Write speed (end of line)
+        result_file.write("%s," % datetime.now().strftime("%H:%M:%S.%f"))   # Write current time
+        result_file.write("%f," % angle)                                    # Write angle
+        result_file.write("%f," % position)                                 # Write position
+        result_file.write("%f\n" % speed)                                   # Write speed (end of line)
         # Close the results file
         result_file.close()
     # END add_results
+    
+    def add_log(self, message):
+        # open the results file
+        result_file = open(self.result_filename, "a")
+        # Write the log
+        result_file.write("%s\n" % message)
+        # re-write the csv headers for next logging
+        result_file.write("timestamp,angle(" + self.angular_units + "),position(inches),speed(percentage)\n")
+        # Close the results file
+        result_file.close()
     
     # Go back to the zero position (linear) so that the next execution starts in the correct place.
     def return_home(self):

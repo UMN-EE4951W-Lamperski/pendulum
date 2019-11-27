@@ -156,6 +156,10 @@ class SwingUpEnv():
         
     def end(self):
         self.sys.deinitialize()
+        
+    def log(self, message):
+        self.sys.add_log(message)
+        print(message)
 
 
 class nnQ(pt.nn.Module):
@@ -368,7 +372,8 @@ try:
             R.append(C)
         UpTime.append(max_up_time)
         #print('t:',ep+1,', R:',C,', L:',t-1,', G:',G,', Q:', Q_est, 'U:', max_up_time)
-        print('Episode:',ep, 'Total Steps:',step, ', Ave. Reward:',C, ', Episode Length:',t-1, 'Max Up-Time:',max_up_time)
+        log = "Episode:" + str(ep) + "   Total Steps:" + str(step) + "   Ave. Reward:" + str(C) + "   Episode Length:" + str(t-1) + "   Max Up-Time:" + str(max_up_time)
+        env.log(log)
 except:
     env.end()
     exit(-1)
