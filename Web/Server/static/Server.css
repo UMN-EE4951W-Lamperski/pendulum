@@ -1,0 +1,24 @@
+.container{
+    color: white;
+    background-color: maroon;
+    border-style: solid;
+    border: 1px solid black;
+    text-align: center;
+    margin:5px;
+}
+
+#title{
+    font-size: xx-large;
+}
+
+#subtitle{
+    font-size: large;
+}
+
+#choose_file{
+
+}
+
+#submit{
+
+}

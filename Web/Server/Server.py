@@ -59,7 +59,7 @@ def upload_file():
             results.write(results_content)
             results.close()
 
-            return render_template('index.html', results = 'True')
+            return render_template('results.html')
         else:
             flash('Allowed file types are .py')
             return redirect(request.url)

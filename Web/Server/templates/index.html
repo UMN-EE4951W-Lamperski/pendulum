@@ -1,43 +1,32 @@
-<html>
-    <head>
-        <link rel="stylesheet" href="/static/Server.css">
-        <script type="text/javascript" src="/static/Server.js"></script>
-    </head>
-    <body>
-		<title>ANDI'S PIE</title>
-		<div id="upload">
-			<h2>Select a file to upload</h2>
-			<p>
-				{% with messages = get_flashed_messages() %}
-				{% if messages %}
-					<ul class=flashes>
-					{% for message in messages %}
-					<li>{{ message }}</li>
-					{% endfor %}
-					</ul>
-				{% endif %}
-				{% endwith %}
-			</p>
-		
-			<form method="post" action="/upload" enctype="multipart/form-data">
-				<dl>
-					<p>
-						<input type="file" name="file" autocomplete="off" required>
-					</p>
-				</dl>
+{% extends "base.html" %}
+
+{% block content %}
+	<div id="upload">
+		<h2>Select a file to upload</h2>
+		<p>
+			{% with messages = get_flashed_messages() %}
+			{% if messages %}
+				<ul class=flashes>
+				{% for message in messages %}
+				<li>{{ message }}</li>
+				{% endfor %}
+				</ul>
+			{% endif %}
+			{% endwith %}
+		</p>
+	
+		<form method="post" action="/upload" enctype="multipart/form-data">
+			<dl>
 				<p>
-					<input type="submit" value="Submit" onclick="showLoad()">
+					<input id="choose_file" type="file" name="file" autocomplete="off" required>
 				</p>
-			</form>
-		</div>
-		
-		<div id="message"></div>
+			</dl>
+			<p>
+				<input id="submit" type="submit" value="Submit" onclick="showLoad()">
+			</p>
+		</form>
+	</div>
+	
+	<div id="message"></div>
 
-		{% if results %}
-			<form method="get" action="/results">
-				<button type="submit">Download!</button>
-			</form>
-		{% endif %}
-
-    </body>
-</html>
+{% endblock %}

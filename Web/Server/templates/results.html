@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <form method="get" action="/results">
+        <button type="submit">Download Results File</button>
+    </form>
+
+    <form method="get" action="/">
+        <button type="submit">Return to upload another file</button>
+    </form>
+{% endblock %}
