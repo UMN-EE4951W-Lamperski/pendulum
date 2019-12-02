@@ -33,20 +33,20 @@ def upload_file():
     if request.method == 'POST':
         # Check if the post request has the file part
         if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
+            print("hi")
+            return render_template('index.html', error = 'No file part')
 
         # Grab the file
         file = request.files['file']
         if file.filename == '':
-            flash('No file selected for uploading')
-            return redirect(request.url)
+            print("hi")
+            return render_template('index.html', error = 'No file selected for uploading')
 
         # Send the file content as a post to the PI
         if file and allowed_file(file.filename):
 
             dictToSend = {'filename':file.filename, 'file_content':file.read()}
-            file.close
+            file.close()
             print('Running test')
             response = requests.post(PI_URL + '/tests/endpoint', json=dictToSend)
             
@@ -61,8 +61,9 @@ def upload_file():
 
             return render_template('results.html')
         else:
-            flash('Allowed file types are .py')
-            return redirect(request.url)
+            print("hi")
+            return render_template('index.html', error = 'Allowed file types are .py')
+    return render_template('index.html', error = 'No file selected')
 
 @app.route('/results', methods=['GET'])
 def download():

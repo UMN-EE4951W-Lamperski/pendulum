@@ -1,6 +1,6 @@
 function showLoad(){
-    var paragraph = document.getElementById("message");
-    var text = document.createTextNode("RUNNING TEST");
+    var paragraph = document.getElementById("running");
+    var text = document.createTextNode("Running Test, Please wait for Results");
     paragraph.appendChild(text);
 
     var div = document.getElementById("upload");

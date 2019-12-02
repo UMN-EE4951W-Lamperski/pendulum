@@ -2,17 +2,11 @@
 
 {% block content %}
 	<div id="upload">
-		<h2>Upload a python file onto the Inverted Pendulum</h2>
+		<h2>Upload a python file onto the inverted pendulum</h2>
 		<p>
-			{% with messages = get_flashed_messages() %}
-			{% if messages %}
-				<ul class=flashes>
-				{% for message in messages %}
-				<li>{{ message }}</li>
-				{% endfor %}
-				</ul>
+			{% if error %}
+				<h2>{{ error }}</h2>
 			{% endif %}
-			{% endwith %}
 		</p>
 	
 		<form method="post" action="/upload" enctype="multipart/form-data">
@@ -22,11 +16,11 @@
 				</p>
 			</dl>
 			<p>
-				<input id="submit" type="submit" value="Submit" onclick="showLoad()">
+				<input id="submit" type="submit" value="Submit"> <!-- onclick="showLoad()"> -->
 			</p>
 		</form>
 	</div>
 	
-	<div id="message"></div>
+	<div id="running"></div>
 
 {% endblock %}
