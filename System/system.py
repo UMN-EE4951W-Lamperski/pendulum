@@ -20,7 +20,7 @@ encoder_data_pin = 3
 ### Angular encoder pins
 encoder_angular_cs_pin = 4
 ### Linear encoder pins
-encoder_linear_cs_pin = 14 
+encoder_linear_cs_pin = 14
 ### Limit switch pins (configured to PULLUP)
 limit_negative_pin = 19
 limit_positive_pin = 26
@@ -88,6 +88,13 @@ class System:
         self.linear_position = 0.
         self.encoder_thread.start()
     # END __init__()
+    
+    # Destructor
+    # Brake the motor and call GPIO.cleanup as a last-chance of doing so
+    def __del__(self):
+        self.motor.brake()
+        GPIO.cleanup()
+    # END __del__()
     
     def initialize(self):
         # Temporarily disable the limit switch interrupts: we do not want the program to exit if the switch is triggered
