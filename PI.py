@@ -2,11 +2,14 @@
 from flask import Flask, render_template, request, url_for, jsonify
 import subprocess
 import os
+import RPi.GPIO as GPIO
 app = Flask(__name__)
 
 UPLOAD_DESTINATION = "Uploads/"
-
+SYSTEM_DESTINATION = "System/"
 RESULTS_DESTINATION = "Results/"
+
+INITIALIZE_SYSTEM = "initialize_system.py"
 
 @app.route('/')
 def home():
@@ -20,12 +23,22 @@ def my_test_endpoint():
     # Put file content into a file caled upload.py
     filename=input_json['filename'].encode("ascii")
     file_content=input_json['file_content'].encode("ascii")
-    upload = open(UPLOAD_DESTINATION + filename, "w")
+    filename=input_json['filename']
+    file_content=input_json['file_content']
+    upload = open(UPLOAD_DESTINATION + filename, "w+")
     upload.write(file_content)
     upload.close()
 
     # Run python script
-    subprocess.call(["python", UPLOAD_DESTINATION + filename])
+    process = subprocess.Popen(["python3", UPLOAD_DESTINATION + filename])
+    try:
+        process.wait()
+        print("Program exited normally!\n")
+    except:
+        print("Exception occurred running program!\n")
+        process.terminate()
+    finally:
+        GPIO.cleanup()
 
     # Get results file
     results_filename = filename.split(".")[0]
@@ -42,7 +55,10 @@ def my_test_endpoint():
     dictToReturn = {'results_filename':results_filename, 'results_content':results_content}
     return jsonify(dictToReturn)
 
+# This will run on system bootup.
 if __name__ == '__main__':
-    app.run(host="localhost", port=8000)
-    # UNCOMMENT IF RUNNING PI.PI ON PI
-    #app.run(host="192.168.1.10", port=8000)
+    os.chdir('/home/pi/pendulum')
+    # Initialize the system before accepting any files.
+    subprocess.call(["python3", SYSTEM_DESTINATION + INITIALIZE_SYSTEM])
+    # Run the web client to start receiving files.
+    app.run(host="192.168.1.10", port=8000)
