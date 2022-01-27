@@ -4,6 +4,15 @@ from system import System
 import RPi.GPIO as GPIO
         
 # Main program
+print("Got to init")
 sys = System()
 sys.initialize()
 GPIO.cleanup()
+
+
+##debug version
+#print("alive")
+#sys = System()
+#limit_negative_pin = 19
+#while(1):
+#    print(GPIO.input(limit_negative_pin))

@@ -2,8 +2,11 @@ from system import System
 from time import sleep
         
 # Main program
+#print("before system()call")
 sys = System()
+#print("after system() call")
 sys.initialize()
+#print("after sys.inintalize called")
 
 ang,lin = sys.measure()
 print("Starting position before moving: " + str(lin))

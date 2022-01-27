@@ -6,7 +6,14 @@ import math
 from gym import spaces, logger
 from gym.utils import seeding
 
+###
+import sys
+sys.path.insert(0, '/home/pi/pendulum/System')
+###
+
+
 from System.system import System
+#from . import System
 import time
 from sys import exit
 
@@ -103,14 +110,20 @@ class SwingUpEnv():
         self.last_time = current_time
         
         new_theta, new_x = self.sys.measure()
-        theta_dot = (new_theta - theta) / tau
+        if (theta >= 0 and theta < math.pi/2.) and (new_theta > 3.*math.pi/2.):
+            theta_dot = (new_theta - (theta + 2.*math.pi)) / tau
+        elif (new_theta >= 0 and new_theta < math.pi/2.) and (theta > 3.*math.pi/2.):
+            theta_dot = ((new_theta + 2.*math.pi) - theta) / tau
+        else:
+            theta_dot = (new_theta - theta) / tau
         x_dot = (new_x - x) / tau
         self.state = (new_x, x_dot, new_theta, theta_dot)
         self.sys.add_results(new_theta, new_x, force)
 
-        done =  theta_dot < -self.theta_dot_threshold \
+        '''done =  theta_dot < -self.theta_dot_threshold \
                 or theta_dot > self.theta_dot_threshold \
-                or self.done == True
+                or self.done == True'''
+        done = self.done
         
         '''done =  x < -self.x_threshold \
                 or x > self.x_threshold \
@@ -325,7 +338,7 @@ gamma = .95
 agent = deepQagent(5,numActions,20,2,epsilon=5e-2,gamma=gamma,batch_size=20,
                    c= 100,alpha=1e-4)
 
-maxSteps = 2e5
+maxSteps = 2e6
 
 # This is a helper to deal with the fact that x[2] is actually an angle
 x_to_y = lambda x : np.array([x[0], x[1], np.cos(x[2]), np.sin(x[2]), x[3]])

@@ -3,9 +3,9 @@ import time
 import RPi.GPIO as GPIO
 
 # Decide which pins to hook up to on the Pi before running
-clk_pin = 2
-cs_pin  = 4
-data_pin = 3
+clk_pin = 3
+cs_pin  = 23
+data_pin = 2
 
 e = Encoder(clk_pin, cs_pin, data_pin)
 e.set_zero()
@@ -19,3 +19,5 @@ except:
 finally:
     # Perform GPIO cleanup. Things may get weird otherwise...
     GPIO.cleanup()
+
+

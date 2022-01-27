@@ -7,6 +7,14 @@ from time import sleep
 import RPi.GPIO as GPIO
 import sys
 import os
+count2 = 0
+##
+import cmath
+##
+
+
+
+
 from threading import Thread, Lock
 
 # IO pin definitions
@@ -15,19 +23,26 @@ motor_speed_pin = 17
 motor_forward_pin = 27
 motor_reverse_pin = 22
 ### Encoder pins (shared by both encoders)
-encoder_clock_pin = 2
-encoder_data_pin = 3
+encoder_clock_pin = 3
+encoder_data_pin = 2
 ### Angular encoder pins
 encoder_angular_cs_pin = 4
 ### Linear encoder pins
-encoder_linear_cs_pin = 14
+encoder_linear_cs_pin = 23
 ### Limit switch pins (configured to PULLUP)
-limit_negative_pin = 19
-limit_positive_pin = 26
+
+#FLIPPING THESE BELOW
+#limit_negative_pin = 19
+#limit_positive_pin = 26
+limit_negative_pin = 26
+limit_positive_pin = 19
 
 # System parameters
 system_max_x = 16.5
 system_min_x = -16.5
+downloads_reference_dest = "."
+default_results_fileName = "results.csv"
+
 
 # System Class
 # This is the primary interface a student will use to control the pendulum.
@@ -74,9 +89,11 @@ class System:
         
         # Create and setup results file (to be sent back to the server and displayed/downloaded to the user)
         # Results file is a CSV with the following entries: angle, position, speed
-        self.result_filename = "Results/" + os.path.basename(sys.argv[0]).split('.')[0] + "_results.csv"
-        
-        result_file = open(self.result_filename, "w+")
+        self.result_filename = downloads_reference_dest + "/Downloads/" + default_results_fileName
+        print("self.result_filename")
+        print(self.result_filename)
+        # Open the file for write mode.  The file contents will get cleared and overwritten
+        result_file = open(self.result_filename, "w")
         result_file.write("timestamp,angle(" + angular_units + "),position(inches),speed(percentage)\n")
         result_file.close()
         
@@ -97,6 +114,7 @@ class System:
     # END __del__()
     
     def initialize(self):
+        print("begin initialize")
         # Temporarily disable the limit switch interrupts: we do not want the program to exit if the switch is triggered
         GPIO.remove_event_detect(limit_negative_pin)
         GPIO.remove_event_detect(limit_positive_pin)
@@ -106,8 +124,10 @@ class System:
             pressed = True
             while pressed != False:
                 pressed = GPIO.input(limit_negative_pin)
+                #print(pressed)
                 sleep(0.01)
         self.motor.brake()
+        print("hit negative end stop")
         # Set zero at the negative end of the track for easy reference in determining the extent
         self.encoder_linear.set_zero()
         sleep(1)
@@ -119,6 +139,7 @@ class System:
             pressed = GPIO.input(limit_positive_pin)
             sleep(0.01)
         self.motor.brake()
+        print("hit positive endstop")
         # Get the current position (the extent of the track)
         extent = self.linear_position
         # Move back towards the center until we reach position extent/2
@@ -127,6 +148,7 @@ class System:
         self.motor.move(-4)
         while position >= (extent / 2.):
             position = self.linear_position
+            #print(position)
             sleep(0.015) 
         self.motor.brake()
         # Set zero again: this is the real zero
@@ -134,6 +156,7 @@ class System:
         # Re-enable the limit switch interrupts
         GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
         GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
+        print("Finsihed the initaialize func")
     # END initialize
     
     # Return home, cleanup IO. This should be called when exiting the program
@@ -308,9 +331,32 @@ class Linear_Encoder:
         # Reset the internal position counter
         self.rotations = 0.
         self.last_position = 0.
+        ###sam debug
+        self.last_position_filter = 0.
+        ###sam debug
     def read_position(self):
+        ###sam debug
+        global count2
+        test = 0
+        count = 0
+        while test == 0:
+            count += 1
+            position = float(self.encoder.read_position('Raw') & 0b1111111100)
+            complex_current = cmath.exp(((position*2*math.pi)/1023)*1j)
+            complex_last = cmath.exp(((self.last_position*2*math.pi)/1023)*1j)
+            distance = math.sqrt((complex_current.real-complex_last.real)**2 + (complex_current.imag-complex_last.imag)**2)
+            if distance < 0.5 or count > 5: #this corresponds to a difference of 50 in the raw encoder position
+                test = 1
+            #print(count)
+            count2 = count2 + count - 1
+            print("global count")
+            print(count2)
+        ###sam debug
+
         # Read the position of the encoder (apply a noise filter, we don't need that much precision here)
-        position = float(self.encoder.read_position('Raw') & 0b1111111100)
+        #position = float(self.encoder.read_position('Raw') & 0b1111111100)
+
+
         # Compare to last known position
         # NOTE: For now, assume that we are moving the smallest possible distance (i.e. 5 -> 1 is -4, not 1020)
         if (position - self.last_position) > 768.:
@@ -322,4 +368,6 @@ class Linear_Encoder:
         self.last_position = position 
         # compute the position based on the system parameters
         # linear position = (2pi*r)(n) + (2pi*r)(position/1024) = (2pi*r)(n + position/1024) = (pi*d)(n + position/1024)
-        return (self.PROPORTION)*(self.rotations + position/1024.)
+        print("sled positin in inches")
+        print(self.PROPORTION*(self.rotations + position/1024.))
+        return((self.PROPORTION)*(self.rotations + position/1024.))

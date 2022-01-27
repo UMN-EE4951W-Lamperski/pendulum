@@ -5,9 +5,9 @@ import os
 import RPi.GPIO as GPIO
 app = Flask(__name__)
 
-UPLOAD_DESTINATION = "Uploads/"
+UPLOAD_DESTINATION = "Uploads/ee4951W_pendulum_web/app/app/FileProcessing/Uploads"
 SYSTEM_DESTINATION = "System/"
-RESULTS_DESTINATION = "Results/"
+RESULTS_DESTINATION = "Uploads/ee4951W_pendulum_web/app/app/FileProcessing/Results"
 
 INITIALIZE_SYSTEM = "initialize_system.py"
 

@@ -20,16 +20,16 @@ class SwingUpEnv(gym.Env):
 
     Observation: 
         Type: Box(4)
-        Num	Observation                 Min         Max
-        0	Cart Position             -4.8            4.8
-        1	Cart Velocity             -Inf            Inf
-        2	Pole Angle                 -Inf           Inf
-        3	Pole Velocity At Tip      -Inf            Inf
+        Num Observation                 Min         Max
+        0   Cart Position             -4.8            4.8
+        1   Cart Velocity             -Inf            Inf
+        2   Pole Angle                 -Inf           Inf
+        3   Pole Velocity At Tip      -Inf            Inf
         
     Actions:
         Type: Box(1)
-        Num	Action                      Min         Max
-        0	Push cart                   -1          1
+        Num Action                      Min         Max
+        0   Push cart                   -1          1
         
         Note: The amount the velocity that is reduced or increased is not fixed; it depends on the angle the pole is pointing. This is because the center of gravity of the pole increases the amount of energy needed to move the cart underneath it
 
@@ -94,7 +94,7 @@ class SwingUpEnv(gym.Env):
         state = self.state
         x, x_dot, theta, theta_dot = state
         force = self.force_mag * action[0]
-		
+        
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
 
