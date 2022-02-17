@@ -156,7 +156,7 @@ class System:
         # Re-enable the limit switch interrupts
         GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
         GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
-        print("Finsihed the initaialize func")
+        print("Finished the initialize func")
     # END initialize
     
     # Return home, cleanup IO. This should be called when exiting the program
@@ -164,7 +164,7 @@ class System:
         self.return_home()
         self.motor.brake()
         self.deinit = True
-        if self.encoder_thread.isAlive():
+        if self.encoder_thread.is_alive():
             self.encoder_thread.join()
         sleep(1)
         GPIO.cleanup()
@@ -368,6 +368,6 @@ class Linear_Encoder:
         self.last_position = position 
         # compute the position based on the system parameters
         # linear position = (2pi*r)(n) + (2pi*r)(position/1024) = (2pi*r)(n + position/1024) = (pi*d)(n + position/1024)
-        print("sled positin in inches")
+        print("sled position in inches")
         print(self.PROPORTION*(self.rotations + position/1024.))
         return((self.PROPORTION)*(self.rotations + position/1024.))
