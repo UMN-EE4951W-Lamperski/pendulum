@@ -6,7 +6,7 @@ from datetime import datetime
 from time import sleep
 import RPi.GPIO as GPIO
 import sys
-import os
+# import os
 count2 = 0
 ##
 import cmath
@@ -41,7 +41,7 @@ limit_positive_pin = 19
 system_max_x = 16.5
 system_min_x = -16.5
 downloads_reference_dest = "."
-default_results_fileName = "results.csv"
+default_results_fileName = "results"
 
 
 # System Class
@@ -89,12 +89,12 @@ class System:
         
         # Create and setup results file (to be sent back to the server and displayed/downloaded to the user)
         # Results file is a CSV with the following entries: angle, position, speed
-        self.result_filename = downloads_reference_dest + "/Downloads/" + default_results_fileName
+        self.result_filename = f"{sys.argv[0].split('.')[0]}.csv"
         print("self.result_filename")
         print(self.result_filename)
-        # Open the file for write mode.  The file contents will get cleared and overwritten
-        result_file = open(self.result_filename, "w")
-        result_file.write("timestamp,angle(" + angular_units + "),position(inches),speed(percentage)\n")
+        # Open the file for write mode.  The file will get created, assuming it does not already exist.
+        result_file = open(self.result_filename, "x")
+        result_file.write(f"timestamp,angle({angular_units}),position(inches),speed(percentage)\n")
         result_file.close()
         
         # Setup a thread to constantly be measuring encoder positions
@@ -264,7 +264,7 @@ class System:
         # Write the log
         result_file.write("%s\n" % message)
         # re-write the csv headers for next logging
-        result_file.write("timestamp,angle(" + self.angular_units + "),position(inches),speed(percentage)\n")
+        result_file.write(f"timestamp,angle({self.angular_units}),position(inches),speed(percentage)\n")
         # Close the results file
         result_file.close()
     

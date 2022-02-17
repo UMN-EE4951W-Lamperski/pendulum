@@ -107,3 +107,6 @@ venv.bak/
 Results/*.csv
 # Uploads
 Uploads/*
+
+# Snyk (security analysis)
+.dccache
