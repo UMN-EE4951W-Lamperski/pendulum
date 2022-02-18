@@ -1,0 +1,4 @@
+gym==0.22.0
+numpy==1.22.2
+setuptools==59.6.0
+torch==1.10.2

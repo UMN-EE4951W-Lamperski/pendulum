@@ -9,7 +9,7 @@ from sys import exit
 
 sys = System(angular_units = 'Radians')
 
-for x in range(0,10:
+for x in range(0,10):
     angle, linear = sys.measure()
     print("Angle: " + str(angle) + ", Linear: " + str(linear))
     sys.add_results(linear, angle, angle)

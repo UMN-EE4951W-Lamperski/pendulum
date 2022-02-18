@@ -1,3 +1,3 @@
+from .system import System
 from .motor import Motor
-from system import System
-from encoder import Encoder
+from .encoder import Encoder
