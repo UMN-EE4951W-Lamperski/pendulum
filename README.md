@@ -8,6 +8,7 @@ The structure for the repository is as follows:
 ```
 ├── System (folder)
 │ ├── system.py (the main Python script)
+│ ├── pendulum.py (here be dragons)
 │ └── motor.py (the motor controller)
 ├── Web (folder)
 │ └── *

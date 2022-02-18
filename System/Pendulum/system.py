@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from motor import Motor
-from encoder import Encoder
+from .motor import Motor
+from .encoder import Encoder
 import math
 from datetime import datetime
 from time import sleep
