@@ -6,13 +6,7 @@ import math
 from gym import spaces, logger
 from gym.utils import seeding
 
-###
-import sys
-sys.path.insert(0, '/home/pi/pendulum/System')
-###
-
-
-from System.system import System
+from pendulum import System
 #from . import System
 import time
 from sys import exit

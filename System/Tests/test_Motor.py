@@ -1,4 +1,4 @@
-from motor import Motor
+from pendulum import Motor
 import time
 import RPi.GPIO as GPIO
 

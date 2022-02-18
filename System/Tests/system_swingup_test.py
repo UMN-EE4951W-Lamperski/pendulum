@@ -6,7 +6,7 @@ import math
 from gym import spaces, logger
 from gym.utils import seeding
 
-from system import System
+from pendulum import System
 import time
 from sys import exit
 

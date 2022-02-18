@@ -1,19 +1,9 @@
-
-
-
-
-
-import sys
-sys.path.insert(0, '/home/pi/pendulum/System')
-from System.system import System
+from pendulum import System
 import time
 from sys import exit
 #import pandas
+from pendulum import Encoder
 
-
-###
-sys.path.insert(0, '/home/pi/pendulum/System')
-from encoder import Encoder
 import RPi.GPIO as GPIO
 
 

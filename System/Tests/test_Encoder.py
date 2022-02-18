@@ -1,4 +1,4 @@
-from encoder import Encoder
+from pendulum import Encoder
 import time
 import RPi.GPIO as GPIO
 

@@ -1,7 +1,4 @@
-
-import sys
-sys.path.insert(0, '/home/pi/pendulum/System')
-from System.system import System
+from pendulum import System
 import time
 from sys import exit
 #import pandas

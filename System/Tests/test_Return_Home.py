@@ -1,4 +1,4 @@
-from system import System
+from pendulum import System
 from time import sleep
         
 # Main program
