@@ -5,11 +5,13 @@
 The git repository for Professor Lamperski's Inverted Pendulum, designed by EE4951W students from 2019, 2021, and 2022.
 
 The structure for the repository is as follows:
+
 ```
 ├── System (folder)
-│ ├── system.py (the main Python script)
-│ ├── pendulum.py (here be dragons)
-│ └── motor.py (the motor controller)
+| ├── pendulum (folder)
+| │ ├── system.py (the main Python script)
+| │ ├── encoder.py (here be dragons)
+| │ └── motor.py (the motor controller)
 ├── Web (folder)
 │ └── *
 └── README.md (what you are currently reading)
