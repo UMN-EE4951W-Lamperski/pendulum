@@ -7,7 +7,7 @@ setup(
     url='https://github.com/UMN-EE4951W-Lamperski/pendulum',
     author='EE 4951W Team',
     author_email='',
-    packages=['Pendulum'],
+    packages=['pendulum'],
     classifiers=[
         'Development Status :: 1 - Planning',
         'Intended Audience :: Science/Research',
