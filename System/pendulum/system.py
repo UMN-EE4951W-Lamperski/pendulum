@@ -19,7 +19,7 @@ from threading import Thread, Lock
 
 # IO pin definitions
 ### Motor pins
-motor_speed_pin = 17
+motor_torque_pin = 17
 motor_forward_pin = 27
 motor_reverse_pin = 22
 ### Encoder pins (shared by both encoders)
@@ -54,7 +54,7 @@ class System:
         self.max_x = system_max_x
         self.min_x = system_min_x
         # Initialize the motor.
-        self.motor = Motor(motor_speed_pin, motor_forward_pin, motor_reverse_pin)
+        self.motor = Motor(motor_torque_pin, motor_forward_pin, motor_reverse_pin)
         # Initialize the angular encoder.
         self.encoder_angular = Encoder(encoder_clock_pin, encoder_angular_cs_pin, encoder_data_pin)
         self.encoder_angular.set_zero(offset = 512) # set offset so that 0 is upright vertical
@@ -88,13 +88,13 @@ class System:
             self.sw_limit_routine = sw_limit_routine
         
         # Create and setup results file (to be sent back to the server and displayed/downloaded to the user)
-        # Results file is a CSV with the following entries: angle, position, speed
+        # Results file is a CSV with the following entries: angle, position, torque
         self.result_filename = f"{sys.argv[0].split('.')[0]}.csv"
         print("self.result_filename")
         print(self.result_filename)
         # Open the file for write mode.  The file will get created, assuming it does not already exist.
         result_file = open(self.result_filename, "x")
-        result_file.write(f"timestamp,angle({angular_units}),position(inches),speed(percentage)\n")
+        result_file.write(f"timestamp,angle({angular_units}),position(inches),torque(percentage)\n")
         result_file.close()
         
         # Setup a thread to constantly be measuring encoder positions
@@ -226,34 +226,34 @@ class System:
             sleep(0.01)
     
     # Adjust the pendulum's linear position using the motor.
-    ### speed: Acceptable values range from -100 to 100 (as a percentage), with 100/-100 being the maximum adjustment speed.
+    ### torque: Acceptable values range from -100 to 100 (as a percentage), with 100/-100 being the maximum adjustment torque.
     #####      Negative values will move the pendulum to the left.
     #####      Positive values will move the pendulum to the right.
-    def adjust(self, speed):
+    def adjust(self, torque):
         if self.interrupted == False:
-            if speed != 0:
-                # cap the speed inputs
-                if speed > 100.:
-                    speed = 100.
-                if speed < -100.:
-                    speed = -100.
-                # change the motor speed
-                # TODO: Make sure the motor is oriented so that positive speed the correct direction (same for negative). Change the values otherwise.
+            if torque != 0:
+                # cap the torque inputs
+                if torque > 100.:
+                    torque = 100.
+                if torque < -100.:
+                    torque = -100.
+                # change the motor torque
+                # TODO: Make sure the motor is oriented so that positive torque the correct direction (same for negative). Change the values otherwise.
                 self.motor.coast()
-                self.motor.move(speed)
+                self.motor.move(torque)
             else:
                 self.motor.coast()
     # END adjust()
     
     # Append data to the results file
-    def add_results(self, angle, position, speed):
+    def add_results(self, angle, position, torque):
         # open the results file
         result_file = open(self.result_filename, "a")
         # Write the results
         result_file.write("%s," % datetime.now().strftime("%H:%M:%S.%f"))   # Write current time
         result_file.write("%f," % angle)                                    # Write angle
         result_file.write("%f," % position)                                 # Write position
-        result_file.write("%f\n" % speed)                                   # Write speed (end of line)
+        result_file.write("%f\n" % torque)                                   # Write torque (end of line)
         # Close the results file
         result_file.close()
     # END add_results
@@ -264,7 +264,7 @@ class System:
         # Write the log
         result_file.write("%s\n" % message)
         # re-write the csv headers for next logging
-        result_file.write(f"timestamp,angle({self.angular_units}),position(inches),speed(percentage)\n")
+        result_file.write(f"timestamp,angle({self.angular_units}),position(inches),torque(percentage)\n")
         # Close the results file
         result_file.close()
     
