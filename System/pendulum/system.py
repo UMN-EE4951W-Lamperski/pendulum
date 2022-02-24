@@ -297,7 +297,7 @@ class System:
         result_file.write("Negative hardware limit has been reached!\n")
         result_file.close()
         # Fire the limit trigger method (stops motor, kills program immediately).
-        self.limit_triggered()
+        self.limit_triggered(3)
     # END negative_limit_callback
     # Callback for when positive limit switch is triggered.
     def positive_limit_callback(self, channel):
@@ -308,12 +308,12 @@ class System:
         result_file.write("Positive hardware limit has been reached!\n")
         result_file.close()
         # Fire the limit trigger method (stops motor, kills program immediately).
-        self.limit_triggered()
+        self.limit_triggered(4)
     # END positive_limit_callback
-    def limit_triggered(self):
+    def limit_triggered(self, code):
         sleep(1)
         self.deinitialize()
-        sys.exit(1)
+        sys.exit(code)
 # END System
 
 # Linear Encoder class
