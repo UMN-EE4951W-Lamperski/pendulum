@@ -74,8 +74,10 @@ class System:
         
         # Setup soft limits if defined by the user (this is "challenge mode" for the user, making the constraints more difficult).
         # By default, the soft limits will not be used (when set NaN), and the whole extent of the system is available (to the HW limits).
-        self.negative_soft_limit = negative_limit
-        self.positive_soft_limit = positive_limit
+        #self.negative_soft_limit = negative_limit
+        #self.positive_soft_limit = positive_limit
+        self.negative_soft_limit = -15
+        self.positive_soft_limit = 15
         # If both limits have been defined, verify that they are valid (i.e. positive limit must be greater than the negative limit)
         if not math.isnan(negative_limit) and not math.isnan(positive_limit) and not negative_limit < positive_limit:
             print("ERROR: Invalid software limits provided. Must be valid floating-point numbers and positive limit must be greater than negative limit. Software limits will be disabled.")
