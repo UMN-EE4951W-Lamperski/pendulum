@@ -156,8 +156,6 @@ class System:
         # Re-enable the limit switch interrupts
         GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
         GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
-        self.negative_soft_limit = -15
-        self.positive_soft_limit = 15
         print("Finished the initialize func")
     # END initialize
     
