@@ -29,13 +29,10 @@ encoder_data_pin = 2
 encoder_angular_cs_pin = 4
 ### Linear encoder pins
 encoder_linear_cs_pin = 23
-### Limit switch pins (configured to PULLUP)
 
-#FLIPPING THESE BELOW
-#limit_negative_pin = 19
-#limit_positive_pin = 26
+### Limit switch pins (configured to PULLUP)
 limit_negative_pin = 26
-limit_positive_pin = 19
+limit_positive_pin = 14
 
 # System parameters
 system_max_x = 16.5
@@ -93,7 +90,7 @@ class System:
         print("self.result_filename")
         print(self.result_filename)
         # Open the file for write mode.  The file will get created, assuming it does not already exist.
-        result_file = open(self.result_filename, "x")
+        result_file = open(self.result_filename, "w")
         result_file.write(f"timestamp,angle({angular_units}),position(inches),torque(percentage)\n")
         result_file.close()
         
@@ -103,6 +100,8 @@ class System:
         self.encoder_thread.setDaemon(True)
         self.angular_position = 0.
         self.linear_position = 0.
+        self.torqueVal = 0.
+        self.record_data = False
         self.encoder_thread.start()
     # END __init__()
     
@@ -124,7 +123,6 @@ class System:
             pressed = True
             while pressed != False:
                 pressed = GPIO.input(limit_negative_pin)
-                #print(pressed)
                 sleep(0.01)
         self.motor.brake()
         print("hit negative end stop")
@@ -154,8 +152,16 @@ class System:
         # Set zero again: this is the real zero
         self.encoder_linear.set_zero()
         # Re-enable the limit switch interrupts
-        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=300)
-        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=300)
+        GPIO.add_event_detect(limit_negative_pin, GPIO.FALLING, callback=self.negative_limit_callback, bouncetime=1)
+        GPIO.add_event_detect(limit_positive_pin, GPIO.FALLING, callback=self.positive_limit_callback, bouncetime=1)
+
+        self.record_data = True
+        sleep(1)
+        if (self.linear_position < -2 or self.linear_position > 2):
+            print("Initialization failed")
+            self.deinitialize()
+            sys.exit(10)
+
         print("Finished the initialize func")
     # END initialize
     
@@ -164,8 +170,6 @@ class System:
         self.return_home()
         self.motor.brake()
         self.deinit = True
-        if self.encoder_thread.is_alive():
-            self.encoder_thread.join()
         sleep(1)
         GPIO.cleanup()
     
@@ -194,6 +198,8 @@ class System:
                     angular_position = angular_position - 360.
             self.angular_position = angular_position
             self.linear_position = self.encoder_linear.read_position()
+            if self.record_data:
+                self.add_results(self.angular_position, self.linear_position, self.torqueVal)
             # Check soft limits
             if (not math.isnan(self.negative_soft_limit)) and self.linear_position < self.negative_soft_limit: #or self.linear_position < self.min_x:
                 if limit_serviced == False:
@@ -206,7 +212,7 @@ class System:
                     result_file.write("Negative software limit %f has been reached!\n" % self.negative_soft_limit)
                     result_file.close()
                     # Fire the limit trigger method
-                    self.sw_limit_routine()
+                    self.sw_limit_routine(5)
             elif (not math.isnan(self.positive_soft_limit)) and self.linear_position > self.positive_soft_limit: #or self.linear_position > self.max_x:
                 if limit_serviced == False:
                     limit_serviced = True
@@ -218,7 +224,7 @@ class System:
                     result_file.write("Positive software limit %f has been reached!\n" % self.positive_soft_limit)
                     result_file.close()
                     # Fire the limit trigger method
-                    self.sw_limit_routine()
+                    self.sw_limit_routine(6)
             elif limit_serviced == True and self.linear_position > (self.negative_soft_limit+0.5) and self.linear_position < (self.positive_soft_limit-0.5):
                 # Clear the limit service flag once we return to a reasonable range that the limit will not trigger again
                 limit_serviced = False
@@ -229,21 +235,24 @@ class System:
     ### torque: Acceptable values range from -100 to 100 (as a percentage), with 100/-100 being the maximum adjustment torque.
     #####      Negative values will move the pendulum to the left.
     #####      Positive values will move the pendulum to the right.
-    def adjust(self, torque):
+    ##### Note: Torque greater than 80 doesn't seem to work, so it's capped at 80 for now
+    def torque(self, torque):
         if self.interrupted == False:
             if torque != 0:
                 # cap the torque inputs
-                if torque > 100.:
-                    torque = 100.
-                if torque < -100.:
-                    torque = -100.
+                if torque > 80.:
+                    torque = 80.
+                if torque < -80.:
+                    torque = -80.
                 # change the motor torque
                 # TODO: Make sure the motor is oriented so that positive torque the correct direction (same for negative). Change the values otherwise.
                 self.motor.coast()
                 self.motor.move(torque)
+                self.torqueVal = torque
             else:
+                self.torqueVal = 0
                 self.motor.coast()
-    # END adjust()
+    # END torque()
     
     # Append data to the results file
     def add_results(self, angle, position, torque):
@@ -257,6 +266,14 @@ class System:
         # Close the results file
         result_file.close()
     # END add_results
+
+    def add_note_to_results(self, note):
+        # open the results file
+        result_file = open(self.result_filename, "a")
+        # Write note
+        result_file.write("%s\n" % note)
+        # Close the results file
+        result_file.close()
     
     def add_log(self, message):
         # open the results file
@@ -270,6 +287,7 @@ class System:
     
     # Go back to the zero position (linear) so that the next execution starts in the correct place.
     def return_home(self):
+        self.record_data = False
         position = self.linear_position
         # slowly move towards 0 until we get there
         if position > 0:
@@ -311,9 +329,10 @@ class System:
         self.limit_triggered(4)
     # END positive_limit_callback
     def limit_triggered(self, code):
-        sleep(1)
+        sleep(0.01)
         self.deinitialize()
         sys.exit(code)
+
 # END System
 
 # Linear Encoder class
@@ -349,8 +368,8 @@ class Linear_Encoder:
                 test = 1
             #print(count)
             count2 = count2 + count - 1
-            print("global count")
-            print(count2)
+            #print("global count")
+            #print(count2)
         ###sam debug
 
         # Read the position of the encoder (apply a noise filter, we don't need that much precision here)
@@ -368,6 +387,6 @@ class Linear_Encoder:
         self.last_position = position 
         # compute the position based on the system parameters
         # linear position = (2pi*r)(n) + (2pi*r)(position/1024) = (2pi*r)(n + position/1024) = (pi*d)(n + position/1024)
-        print("sled position in inches")
-        print(self.PROPORTION*(self.rotations + position/1024.))
+        #print("sled position in inches")
+        #print(self.PROPORTION*(self.rotations + position/1024.))
         return((self.PROPORTION)*(self.rotations + position/1024.))
