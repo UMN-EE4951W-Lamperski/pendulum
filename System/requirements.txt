@@ -1,4 +1,4 @@
 gym==0.22.0
 numpy==1.22.2
-setuptools==60.9.3
+setuptools==62.3.1
 torch==1.10.2
